@@ -1,0 +1,4 @@
+# Make every ts-rs #[ts(export)] write to <workspace-root>/web/src/types/.
+# `relative = true` resolves the value against the directory containing .cargo/.
+[env]
+TS_RS_EXPORT_DIR = { value = "web/src/types", relative = true }

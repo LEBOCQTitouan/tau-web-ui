@@ -7,27 +7,27 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum Substrate { Host, Wasm, #[serde(rename = "c-abi")] CAbi, Mcu }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum Mode { Dev, Prod }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum RunStatus { Running, Completed, Failed, Cancelled }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum Source { Serve, Log, Otlp, Wasm }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 pub struct TokenUsage {
     pub input_tokens: u64,
     pub output_tokens: u64,
@@ -36,11 +36,11 @@ pub struct TokenUsage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 pub struct RunError { pub kind: String, pub detail: String }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 pub struct Run {
     pub id: String,
     pub agent_id: String,
@@ -58,17 +58,17 @@ pub struct Run {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum SpanKind { Run, Turn, ToolCall, Agent, McpCall, ContextStep, #[ts(skip)] #[serde(other)] Other }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum SpanStatus { Running, Ok, Error }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 pub struct Span {
     pub id: String,
     pub parent_id: Option<String>,
@@ -78,23 +78,25 @@ pub struct Span {
     pub status: SpanStatus,
     pub started_at: String,
     pub ended_at: Option<String>,
+    #[ts(type = "unknown")]
     pub attributes: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 pub struct Event {
     pub run_id: String,
     pub span_id: Option<String>,
     pub ts: String,
     /// Free-form so unknown RunEvent kinds survive (RunEvent is #[non_exhaustive]).
     pub kind: String,
+    #[ts(type = "unknown")]
     pub payload: serde_json::Value,
 }
 
 /// What the WS pushes to the browser: a tagged union of incremental updates.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../web/src/types/")]
+#[ts(export)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum WsMessage {
     /// Full current span list, sent once on connect (replay).
@@ -155,10 +157,6 @@ mod tests {
 
     #[test]
     fn export_bindings() {
-        // Set TS_RS_EXPORT_DIR to "." so that export_to = "../web/src/types/"
-        // resolves relative to the crate root (gateway/) → ../web/src/types/
-        // which is the workspace-root web/src/types/ directory.
-        std::env::set_var("TS_RS_EXPORT_DIR", ".");
         Run::export_all().expect("export Run + deps");
         Span::export_all().expect("export Span + deps");
         WsMessage::export_all().expect("export WsMessage + deps");

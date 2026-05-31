@@ -1,0 +1,13 @@
+/* Storybook-only dark theme.
+   The app ships these vars commented out in src/index.css ("dark-ready seam,
+   no toggle UI in this scope"). Storybook fills them in so the toolbar
+   light/dark toggle is meaningful, without changing app behavior. */
+.dark {
+  --bg: 15 17 21;
+  --surface: 22 27 34;
+  --border: 33 38 45;
+  --fg: 230 237 243;
+  --muted: 125 133 144;
+  --accent: 167 139 250;
+  --accent-fg: 15 17 21;
+}

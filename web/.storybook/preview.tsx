@@ -21,15 +21,21 @@ const preview: Preview = {
       themes: { light: "", dark: "dark" },
       defaultTheme: "light",
     }),
-    // Most components use react-router hooks (NavLink / useLocation / useNavigate).
-    // Individual stories can override this with their own router/route setup.
-    (Story) => (
-      <MemoryRouter initialEntries={["/runs"]}>
-        <div className="min-h-[140px] bg-bg p-4 text-fg">
-          <Story />
-        </div>
-      </MemoryRouter>
-    ),
+    // Single app-wide router so react-router hooks (NavLink / useLocation /
+    // useNavigate / useParams) work everywhere. The initial path is per-story:
+    // set `parameters.router.initialEntries` to control it. Stories that need
+    // route params render their own <Routes> INSIDE this router (never another
+    // <Router> — react-router forbids nesting them).
+    (Story, ctx) => {
+      const initialEntries = ctx.parameters.router?.initialEntries ?? ["/runs"];
+      return (
+        <MemoryRouter initialEntries={initialEntries}>
+          <div className="min-h-[140px] bg-bg p-4 text-fg">
+            <Story />
+          </div>
+        </MemoryRouter>
+      );
+    },
   ],
 };
 

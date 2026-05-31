@@ -1,5 +1,4 @@
 import type { Decorator } from "@storybook/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { useStore } from "../store/store";
 
 type StoreState = ReturnType<typeof useStore.getState>;
@@ -31,18 +30,7 @@ export function withStore(state: Partial<StoreData> = {}): Decorator {
   };
 }
 
-/**
- * Render a story at a specific route. Useful for components that branch on the
- * URL (e.g. Navbar's title) or read route params (TracePage). The global
- * preview decorator already provides a default MemoryRouter at "/runs"; use
- * this when a story needs a different path or nested <Outlet> routing.
- */
-export function withRoute(path: string, routePattern = "*"): Decorator {
-  return (Story) => (
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path={routePattern} element={<Story />} />
-      </Routes>
-    </MemoryRouter>
-  );
-}
+// To render a story at a specific route, set `parameters.router.initialEntries`
+// (the global preview decorator owns the single MemoryRouter). For route params
+// or <Outlet> nesting, give the story a `render` that returns <Routes> — those
+// nest fine inside the global router; a second <Router> does not.

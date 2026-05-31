@@ -56,3 +56,25 @@ test("launch a workflow and watch the step trace", async ({ page }) => {
   await expect(page.getByText(/view agent trace/i)).toBeVisible();
   await expect(page.getByText("completed")).toBeVisible({ timeout: 5000 });
 });
+
+test("config + packages surfaces work", async ({ page }) => {
+  // Packages: install a new one
+  await page.goto("/packages");
+  await expect(page.getByRole("cell", { name: "anthropic", exact: true })).toBeVisible({
+    timeout: 5000,
+  });
+  await page.getByLabel("install git url").fill("https://github.com/acme/cooltool.git");
+  await page.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "cooltool", exact: true })).toBeVisible({
+    timeout: 5000,
+  });
+
+  // Config: import a community agent → appears in the agents table
+  await page.goto("/config");
+  await expect(page.getByLabel("project name")).toBeVisible({ timeout: 5000 });
+  await page.getByLabel("import git url").fill("https://github.com/acme/researcher-pro.git");
+  await page.getByRole("button", { name: "Import" }).click();
+  await expect(page.getByRole("cell", { name: "researcher-pro", exact: true })).toBeVisible({
+    timeout: 5000,
+  });
+});

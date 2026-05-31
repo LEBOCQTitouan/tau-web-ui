@@ -1,5 +1,6 @@
 import type { Node, Edge } from "@xyflow/react";
 import type { Span } from "../types/Span";
+import { buildForest } from "./forest";
 
 export interface SpanNodeData extends Record<string, unknown> {
   label: string;
@@ -10,36 +11,21 @@ export interface SpanNodeData extends Record<string, unknown> {
 const X_GAP = 220;
 const Y_GAP = 70;
 
-/** Deterministic tree layout: x = depth, y = order within a depth-first walk. */
+/** Deterministic tree layout: x = depth, y = DFS order. Edges follow resolved parents. */
 export function spansToFlow(spans: Span[]): { nodes: Node<SpanNodeData>[]; edges: Edge[] } {
-  const byId = new Map(spans.map((s) => [s.id, s]));
-  const childrenOf = new Map<string | null, Span[]>();
-  for (const s of spans) {
-    const key = s.parent_id && byId.has(s.parent_id) ? s.parent_id : null;
-    const list = childrenOf.get(key) ?? [];
-    list.push(s);
-    childrenOf.set(key, list);
-  }
-
-  const nodes: Node<SpanNodeData>[] = [];
-  const edges: Edge[] = [];
-  let row = 0;
-
-  function walk(parent: string | null, depth: number) {
-    for (const s of childrenOf.get(parent) ?? []) {
-      nodes.push({
-        id: s.id,
-        position: { x: depth * X_GAP, y: row * Y_GAP },
-        data: { label: s.name, kind: s.kind, status: s.status },
-        type: "span",
-      });
-      if (s.parent_id && byId.has(s.parent_id)) {
-        edges.push({ id: `${s.parent_id}->${s.id}`, source: s.parent_id, target: s.id });
-      }
-      row += 1;
-      walk(s.id, depth + 1);
-    }
-  }
-  walk(null, 0);
+  const rows = buildForest(spans);
+  const nodes: Node<SpanNodeData>[] = rows.map((r, i) => ({
+    id: r.span.id,
+    position: { x: r.depth * X_GAP, y: i * Y_GAP },
+    data: { label: r.span.name, kind: r.span.kind, status: r.span.status },
+    type: "span",
+  }));
+  const edges: Edge[] = rows
+    .filter((r) => r.resolvedParent !== null)
+    .map((r) => ({
+      id: `${r.resolvedParent}->${r.span.id}`,
+      source: r.resolvedParent as string,
+      target: r.span.id,
+    }));
   return { nodes, edges };
 }

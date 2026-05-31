@@ -1,23 +1,40 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../store/store";
 
+type Mode = "agent" | "workflow";
+
 export function Launcher() {
   const project = useStore((s) => s.project);
+  const workflows = useStore((s) => s.workflows);
   const launch = useStore((s) => s.launch);
+  const launchWorkflow = useStore((s) => s.launchWorkflow);
+  const loadWorkflows = useStore((s) => s.loadWorkflows);
   const navigate = useNavigate();
+
+  const [mode, setMode] = useState<Mode>("agent");
   const [agent, setAgent] = useState("");
+  const [workflow, setWorkflow] = useState("");
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    loadWorkflows().catch(() => {});
+  }, [loadWorkflows]);
+
   const agents = project?.agents ?? [];
-  const selected = agent || agents[0] || "";
+  const selAgent = agent || agents[0] || "";
+  const selWorkflow = workflow || workflows[0] || "";
+  const target = mode === "agent" ? selAgent : selWorkflow;
 
   async function onRun() {
-    if (!selected || !prompt.trim()) return;
+    if (!target || !prompt.trim()) return;
     setBusy(true);
     try {
-      const id = await launch(selected, prompt);
+      const id =
+        mode === "agent"
+          ? await launch(selAgent, prompt)
+          : await launchWorkflow(selWorkflow, prompt);
       setPrompt("");
       navigate(`/runs/${id}`);
     } finally {
@@ -26,22 +43,50 @@ export function Launcher() {
   }
 
   return (
-    <div className="mb-4 flex items-center gap-2">
-      <select
-        value={selected}
-        onChange={(e) => setAgent(e.target.value)}
-        aria-label="agent"
-        className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs"
-      >
-        {agents.map((a) => (
-          <option key={a} value={a}>
-            {a}
-          </option>
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="inline-flex rounded-md border border-border bg-surface p-0.5 text-xs">
+        {(["agent", "workflow"] as Mode[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`rounded px-2.5 py-1 font-medium capitalize ${
+              mode === m ? "bg-accent text-accent-fg" : "text-muted hover:text-fg"
+            }`}
+          >
+            {m.charAt(0).toUpperCase() + m.slice(1)}
+          </button>
         ))}
-      </select>
+      </div>
+      {mode === "agent" ? (
+        <select
+          value={selAgent}
+          onChange={(e) => setAgent(e.target.value)}
+          aria-label="agent"
+          className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs"
+        >
+          {agents.map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <select
+          value={selWorkflow}
+          onChange={(e) => setWorkflow(e.target.value)}
+          aria-label="workflow"
+          className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs"
+        >
+          {workflows.map((w) => (
+            <option key={w} value={w}>
+              {w}
+            </option>
+          ))}
+        </select>
+      )}
       <input
-        className="flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-accent"
-        placeholder="Prompt…"
+        className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-accent"
+        placeholder={mode === "agent" ? "Prompt…" : "Workflow input…"}
         value={prompt}
         aria-label="prompt"
         onChange={(e) => setPrompt(e.target.value)}
@@ -49,7 +94,7 @@ export function Launcher() {
       />
       <button
         onClick={onRun}
-        disabled={busy || !selected}
+        disabled={busy || !target}
         className="rounded-md bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-50"
       >
         {busy ? "Running…" : "Run"}

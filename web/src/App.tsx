@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./app/AppLayout";
 import { StubPage } from "./app/StubPage";
+import { ConfigPage } from "./config/ConfigPage";
 import { DashboardPage } from "./dashboard/DashboardPage";
 import { RunsPage } from "./runs/RunsPage";
 import { TracePage } from "./trace/TracePage";
@@ -35,16 +36,7 @@ export function App() {
             <StubPage title="Packages" subtitle="Install & manage packages — coming soon." />
           }
         />
-        <Route
-          path="config"
-          element={
-            <StubPage
-              title="Config & Capabilities"
-              subtitle="Project config & capability profiles — coming soon."
-              gated="β.5 (credentials)"
-            />
-          }
-        />
+        <Route path="config" element={<ConfigPage />} />
         <Route path="runs" element={<RunsPage />} />
         <Route path="runs/:id" element={<TracePage />} />
         <Route

@@ -17,14 +17,18 @@ export const putConfig = (name: string, description: string) =>
   }).then(json<{ ok: boolean }>);
 
 export const getPackages = () =>
-  fetch("/api/packages").then(json<{ packages: Package[] }>).then((r) => r.packages);
+  fetch("/api/packages")
+    .then(json<{ packages: Package[] }>)
+    .then((r) => r.packages);
 
 export const installPackage = (git_url: string) =>
   fetch("/api/packages/install", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ git_url }),
-  }).then(json<{ package: Package }>).then((r) => r.package);
+  })
+    .then(json<{ package: Package }>)
+    .then((r) => r.package);
 
 export const uninstallPackage = (name: string) =>
   fetch(`/api/packages/${name}`, { method: "DELETE" }).then(json<{ ok: boolean }>);
@@ -34,17 +38,25 @@ export const updatePackage = (name: string, to?: string) =>
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ to: to ?? null }),
-  }).then(json<{ package: Package }>).then((r) => r.package);
+  })
+    .then(json<{ package: Package }>)
+    .then((r) => r.package);
 
 export const resolvePackages = () =>
-  fetch("/api/packages/resolve", { method: "POST" }).then(json<{ packages: Package[] }>).then((r) => r.packages);
+  fetch("/api/packages/resolve", { method: "POST" })
+    .then(json<{ packages: Package[] }>)
+    .then((r) => r.packages);
 
 export const verifyPackages = () =>
-  fetch("/api/packages/verify", { method: "POST" }).then(json<{ results: VerifyResult[] }>).then((r) => r.results);
+  fetch("/api/packages/verify", { method: "POST" })
+    .then(json<{ results: VerifyResult[] }>)
+    .then((r) => r.results);
 
 export const importAgent = (git_url: string, llm_backend: string) =>
   fetch("/api/agents/import", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ git_url, llm_backend }),
-  }).then(json<{ agent_id: string }>).then((r) => r.agent_id);
+  })
+    .then(json<{ agent_id: string }>)
+    .then((r) => r.agent_id);

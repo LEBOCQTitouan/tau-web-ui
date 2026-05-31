@@ -3,3 +3,4 @@
 /web/dist
 /.tau-web-ui
 *.log
+*.tsbuildinfo

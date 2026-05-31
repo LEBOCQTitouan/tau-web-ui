@@ -12,6 +12,7 @@ never a redesign. Every adapter produces the same `TraceDelta`/Trace model.
 | log-adapter (workflows) | `gateway/src/adapters/log.rs` | tau workflow JSONL (exists) — wire when workflow surface lands |
 | otlp-adapter (prod) | `gateway/src/adapters/otlp.rs` | tau artifacts emitting OTLP |
 | wasm/c-abi/mcu substrates | new `adapters/{wasm,cabi,mcu}.rs` | tau γ.2/3/4/5 |
+| Context-window utilization | `web/src/dashboard/ContextBar.tsx` (renders WIP now; pass `context={{pct}}` to activate) | tau emitting context-window size + per-turn peak tokens → add nullable `context` to gateway `Run`, populate in serve-adapter, regen TS types |
 
 Cross-cutting: `Substrate`/`Mode` already exist on `Run` as enums; deferred substrates
 and prod mode are filters/badges, never new screens (spec §1.3).

@@ -53,6 +53,12 @@
 - **e2e (Playwright)**: a light case — navigate to `/config`, edit the name, Save (expect a "saved" affirmation); navigate to `/packages`, install a git URL (expect a new row). Keep the existing run/workflow e2e green.
 - All existing unit + e2e + the ts-rs drift gate stay green.
 
+## 4b. Addendum — Import community agents (added in review)
+An agent ships as a package; "importing a community agent" = **install its package from git + register a minimal `[agents.<id>]`** so it appears in the overview and is runnable from the Launcher. Full editing (prompt/tools/capabilities) stays in the Agents sub-project.
+- **Gateway:** `ConfigStore::add_agent(project, id, display_name, package, llm_backend)` — `toml_edit` writes a new `[agents.<id>]` table (`display_name`, `package`, `llm_backend`), preserving the rest of `tau.toml`. New `AppState::import_agent(git_url, llm_backend)`: derive `id` from the git repo name (e.g. `acme/researcher-pro.git` → `researcher-pro`), call `PackageOps::install(git_url)` to get the `Package`, then `add_agent(id, id, "<pkg-name>@^<version>", llm_backend)`. New endpoint `POST /api/agents/import { git_url, llm_backend }` → `{ agent_id }`.
+- **Frontend (ConfigPage):** an **"Import community agent"** form in the Agents card — git URL input + `llm_backend` select (options from the existing agents' backends + a default like `anthropic`) + **Import** button → `importAgent(git_url, llm_backend)` → refetch config; the new agent appears in the table. `AgentInfo` gains a `source` field (`"local"` or the git repo, derived from the package ref) shown as a column.
+- **Tests:** `ConfigStore::add_agent` writes a readable `[agents.<id>]` (tempdir); `import_agent` installs + registers (agent appears in `read`); ConfigPage import form calls `importAgent` and shows the new row.
+
 ## 5. Non-goals (YAGNI)
 - No agent/capability **authoring** (separate sub-project) — Config only edits `[project]` and shows a read-only agent overview.
 - No real credential management — gated stub.

@@ -107,3 +107,15 @@ describe("store.loadHealth", () => {
     vi.restoreAllMocks();
   });
 });
+
+describe("store.loadWorkflows", () => {
+  it("stores workflow names", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ workflows: ["wf-a", "wf-b"] }) }),
+    );
+    await useStore.getState().loadWorkflows();
+    expect(useStore.getState().workflows).toEqual(["wf-a", "wf-b"]);
+    vi.restoreAllMocks();
+  });
+});

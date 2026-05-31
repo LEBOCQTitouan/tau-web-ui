@@ -7,6 +7,8 @@ import {
   getProject,
   listRuns,
   launchRun,
+  getWorkflows,
+  launchWorkflow,
   getTrace,
   cancelRun,
   openRunSocket,
@@ -24,6 +26,7 @@ interface AppStore {
   health: Health | null;
   project: Project | null;
   runs: Run[];
+  workflows: string[];
   currentTrace: TraceState | null;
   assistantText: string;
   selectedSpanId: string | null;
@@ -33,6 +36,8 @@ interface AppStore {
   loadProject: () => Promise<void>;
   refreshRuns: (filters?: { status?: string; agent?: string }) => Promise<void>;
   launch: (agent: string, prompt: string) => Promise<string>;
+  loadWorkflows: () => Promise<void>;
+  launchWorkflow: (workflow: string, input: string) => Promise<string>;
   openTrace: (id: string) => Promise<void>;
   closeTrace: () => void;
   cancelCurrent: () => Promise<void>;
@@ -51,6 +56,7 @@ export const useStore = create<AppStore>((set, get) => ({
   health: null,
   project: null,
   runs: [],
+  workflows: [],
   currentTrace: null,
   assistantText: "",
   selectedSpanId: null,
@@ -68,6 +74,19 @@ export const useStore = create<AppStore>((set, get) => ({
 
   launch: async (agent, prompt) => {
     const id = await launchRun(agent, prompt);
+    await get().refreshRuns();
+    return id;
+  },
+
+  loadWorkflows: async () => {
+    try {
+      set({ workflows: await getWorkflows() });
+    } catch {
+      /* ignore */
+    }
+  },
+  launchWorkflow: async (workflow, input) => {
+    const id = await launchWorkflow(workflow, input);
     await get().refreshRuns();
     return id;
   },

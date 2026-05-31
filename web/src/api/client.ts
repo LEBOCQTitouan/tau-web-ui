@@ -46,6 +46,21 @@ export function listRuns(filters: { status?: string; agent?: string } = {}): Pro
   return fetch(`/api/runs${qs ? `?${qs}` : ""}`).then(json<Run[]>);
 }
 
+export const getWorkflows = () =>
+  fetch("/api/workflows")
+    .then(json<{ workflows: string[] }>)
+    .then((r) => r.workflows);
+
+export function launchWorkflow(workflow: string, input: string): Promise<string> {
+  return fetch("/api/workflows/run", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ workflow, input }),
+  })
+    .then(json<{ run_id: string }>)
+    .then((r) => r.run_id);
+}
+
 export const getTrace = (id: string) => fetch(`/api/runs/${id}`).then(json<Trace>);
 export const cancelRun = (id: string) =>
   fetch(`/api/runs/${id}/cancel`, { method: "POST" })

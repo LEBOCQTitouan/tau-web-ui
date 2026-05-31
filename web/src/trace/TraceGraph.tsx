@@ -5,35 +5,30 @@ import {
   Controls,
   Handle,
   Position,
-  type NodeProps,
   type Node,
+  type NodeProps,
 } from "@xyflow/react";
 import type { Span } from "../types/Span";
 import { spansToFlow, type SpanNodeData } from "./layout";
 import { useStore } from "../store/store";
 
-const STATUS_FILL: Record<string, string> = {
-  running: "#dbeafe",
-  ok: "#dcfce7",
-  error: "#fee2e2",
+const FILL: Record<string, string> = {
+  running: "bg-st-running-soft border-st-running/40",
+  ok: "bg-st-ok-soft border-st-ok/40",
+  error: "bg-st-error-soft border-st-error/40",
 };
 
 function SpanNode({ data, id }: NodeProps<Node<SpanNodeData>>) {
   const selected = useStore((s) => s.selectedSpanId === id);
   return (
     <div
-      style={{
-        padding: "6px 10px",
-        borderRadius: 8,
-        fontSize: 12,
-        background: STATUS_FILL[data.status] ?? "#f3f4f6",
-        border: selected ? "2px solid #2563eb" : "1px solid #cbd5e1",
-        minWidth: 120,
-      }}
+      className={`min-w-[120px] rounded-lg border px-2.5 py-1.5 text-xs ${
+        FILL[data.status] ?? "border-border bg-surface"
+      } ${selected ? "ring-2 ring-accent" : ""}`}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontWeight: 600 }}>{data.label}</div>
-      <div style={{ color: "#64748b" }}>
+      <div className="font-semibold">{data.label}</div>
+      <div className="text-muted">
         {data.kind} · {data.status}
       </div>
       <Handle type="source" position={Position.Right} />
@@ -47,7 +42,7 @@ export function TraceGraph({ spans }: { spans: Span[] }) {
   const select = useStore((s) => s.selectSpan);
   const { nodes, edges } = useMemo(() => spansToFlow(spans), [spans]);
   return (
-    <div style={{ height: "100%", width: "100%" }}>
+    <div className="h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}

@@ -138,10 +138,14 @@ impl ServeClient {
                     Err(e) => tracing::warn!("unparseable serve line: {e}: {line}"),
                 }
             }
-            // stdout closed -> child gone. Fail all in-flight runs.
-            let mut runs = pump_inner.runs.lock().await;
-            for (_, tx) in runs.drain() {
+            // stdout closed -> child gone. Fail all in-flight runs AND unary waiters.
+            for (_, tx) in pump_inner.runs.lock().await.drain() {
                 let _ = tx.send(RunItem::Error(RpcError {
+                    code: -32603, message: "tau serve child exited".into(), data: None,
+                }));
+            }
+            for (_, tx) in pump_inner.unary.lock().await.drain() {
+                let _ = tx.send(Err(RpcError {
                     code: -32603, message: "tau serve child exited".into(), data: None,
                 }));
             }
@@ -180,7 +184,10 @@ impl ServeClient {
         let id = self.alloc_id();
         let (tx, rx) = oneshot::channel();
         self.inner.unary.lock().await.insert(id, tx);
-        self.write_request(&Request::new(id, method, params)).await?;
+        if let Err(e) = self.write_request(&Request::new(id, method, params)).await {
+            self.inner.unary.lock().await.remove(&id);
+            return Err(e);
+        }
         match rx.await {
             Ok(Ok(v)) => Ok(v),
             Ok(Err(e)) => Err(anyhow!("rpc error {}: {}", e.code, e.message)),
@@ -203,8 +210,11 @@ impl ServeClient {
         let id = self.alloc_id();
         let (tx, rx) = mpsc::unbounded_channel();
         self.inner.runs.lock().await.insert(id, tx);
-        self.write_request(&Request::new(id, "runtime.run_streaming",
-            json!({"agent": agent, "prompt": prompt}))).await?;
+        if let Err(e) = self.write_request(&Request::new(id, "runtime.run_streaming",
+            json!({"agent": agent, "prompt": prompt}))).await {
+            self.inner.runs.lock().await.remove(&id);
+            return Err(e);
+        }
         Ok((id, rx))
     }
 

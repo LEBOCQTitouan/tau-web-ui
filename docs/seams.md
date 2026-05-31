@@ -6,7 +6,7 @@ never a redesign. Every adapter produces the same `TraceDelta`/Trace model.
 | Surface | Home (file) | Gating tau dependency |
 |---|---|---|
 | ① Graph editor (Workflow IR) | `web/src/graph/` (Plan 2 stub) + future `POST /api/build-from-ir` | tau β.2 Workflow IR (framing D) |
-| ② Project/Config | future `GET/PUT /api/project/config` + `adapters` cli-json | tau δ.1 resolver |
+| ② Project/Config | `gateway/src/config/mod.rs` (tau.toml R/W) + `packages/mod.rs` (MockOps; CliOps seam) — IMPLEMENTED; credentials gated | tau δ.1 resolver / β.5 credentials (CliOps shells real tau later) |
 | ③ Targets & Build | future `POST /api/build`, `GET /api/targets`, `GET /api/runs/:id/conformance` | tau B/C.2/γ, β.6 |
 | ⑥ Checks/Health | future `POST /api/check` → SARIF render | available now (tau check --json/--sarif) |
 | log-adapter (workflows) | `gateway/src/adapters/log.rs` — IMPLEMENTED (StepRecord→spans); step→agent drill gated | tau step→agent-run linkage (future) — real-tau workflow launch via `CliRunner` seam |

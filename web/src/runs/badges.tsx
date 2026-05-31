@@ -1,23 +1,15 @@
 import type { Run } from "../types/Run";
 
-const STATUS_COLORS: Record<string, string> = {
-  running: "#2563eb",
-  completed: "#16a34a",
-  failed: "#dc2626",
-  cancelled: "#a16207",
+const STATUS_CLASS: Record<Run["status"], string> = {
+  running: "bg-st-running-soft text-st-running",
+  completed: "bg-st-ok-soft text-st-ok",
+  failed: "bg-st-error-soft text-st-error",
+  cancelled: "bg-st-cancelled-soft text-st-cancelled",
 };
 
 export function StatusBadge({ status }: { status: Run["status"] }) {
   return (
-    <span
-      style={{
-        background: STATUS_COLORS[status] ?? "#666",
-        color: "white",
-        padding: "2px 8px",
-        borderRadius: 6,
-        fontSize: 12,
-      }}
-    >
+    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[status]}`}>
       {status}
     </span>
   );
@@ -31,15 +23,7 @@ export function SubstrateModeBadge({
   mode: Run["mode"];
 }) {
   return (
-    <span
-      style={{
-        border: "1px solid #ccc",
-        padding: "2px 8px",
-        borderRadius: 6,
-        fontSize: 12,
-        color: "#555",
-      }}
-    >
+    <span className="inline-block rounded border border-border px-2 py-0.5 text-xs text-muted">
       {substrate} · {mode}
     </span>
   );

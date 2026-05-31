@@ -3,18 +3,8 @@ import { useStore } from "../store/store";
 export function AssistantStream() {
   const text = useStore((s) => s.assistantText);
   return (
-    <div
-      style={{
-        padding: 12,
-        fontFamily: "ui-monospace, monospace",
-        fontSize: 13,
-        whiteSpace: "pre-wrap",
-        borderTop: "1px solid #eee",
-        maxHeight: 180,
-        overflow: "auto",
-      }}
-    >
-      {text || <span style={{ color: "#aaa" }}>No assistant output yet…</span>}
+    <div className="max-h-44 overflow-auto whitespace-pre-wrap border-t border-border bg-surface p-3 font-mono text-[13px]">
+      {text || <span className="text-muted">No assistant output yet…</span>}
     </div>
   );
 }

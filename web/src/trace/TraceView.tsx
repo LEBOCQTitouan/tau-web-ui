@@ -10,24 +10,24 @@ export function TraceView() {
   const close = useStore((s) => s.closeTrace);
 
   if (!trace) {
-    return (
-      <section style={{ padding: 16, color: "#888" }}>Select a run to view its trace.</section>
-    );
+    return <section className="p-4 text-sm text-muted">Select a run to view its trace.</section>;
   }
   const selected = trace.spans.find((s) => s.id === selectedId) ?? null;
 
   return (
-    <section style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px" }}>
-        <strong style={{ fontSize: 14 }}>Trace · {trace.run.agent_id}</strong>
-        <button onClick={close}>← Back to runs</button>
+    <section className="flex h-full flex-col">
+      <div className="flex items-center justify-between px-3 py-2">
+        <strong className="text-sm">Trace · {trace.run.agent_id}</strong>
+        <button onClick={close} className="text-xs text-accent">
+          ← Back to runs
+        </button>
       </div>
       <RunControls />
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        <div style={{ flex: 2, borderRight: "1px solid #eee", minWidth: 0 }}>
+      <div className="flex min-h-0 flex-1">
+        <div className="min-w-0 flex-[2] border-r border-border">
           <TraceGraph spans={trace.spans} />
         </div>
-        <div style={{ flex: 1, minWidth: 280, overflow: "auto" }}>
+        <div className="min-w-[280px] flex-1 overflow-auto">
           <SpanInspector span={selected} />
         </div>
       </div>

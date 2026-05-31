@@ -8,21 +8,16 @@ export function RunControls() {
   if (!trace) return null;
   const { run } = trace;
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-        alignItems: "center",
-        padding: 12,
-        borderBottom: "1px solid #eee",
-      }}
-    >
+    <div className="flex items-center gap-3 border-b border-border px-3 py-2">
       <StatusBadge status={run.status} />
-      <span style={{ fontSize: 12, color: "#555" }}>turns: {run.total_turns ?? "—"}</span>
-      <span style={{ fontSize: 12, color: "#555" }}>{formatTokens(run)}</span>
-      <span style={{ fontSize: 12, color: "#555" }}>{formatDuration(run)}</span>
+      <span className="text-xs text-muted">turns: {run.total_turns ?? "—"}</span>
+      <span className="text-xs text-muted">{formatTokens(run)}</span>
+      <span className="text-xs text-muted">{formatDuration(run)}</span>
       {run.status === "running" && (
-        <button onClick={() => cancel()} style={{ marginLeft: "auto" }}>
+        <button
+          onClick={() => cancel()}
+          className="ml-auto rounded-md border border-border px-2.5 py-1 text-xs hover:bg-bg"
+        >
           Cancel
         </button>
       )}

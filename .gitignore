@@ -1,6 +1,7 @@
 /target
 **/node_modules
 /web/dist
+/web/storybook-static
 /.tau-web-ui
 *.log
 *.tsbuildinfo

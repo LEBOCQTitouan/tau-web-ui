@@ -5,7 +5,17 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import prettier from "eslint-config-prettier";
 
 export default tseslint.config(
-  { ignores: ["dist", "src/types", "playwright-report", "test-results", "coverage"] },
+  {
+    ignores: [
+      "dist",
+      "src/types",
+      "playwright-report",
+      "test-results",
+      "coverage",
+      "storybook-static",
+      "!.storybook",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -21,7 +31,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.test.{ts,tsx}", "e2e/**", "src/test-setup.ts", "*.config.{ts,js}"],
+    files: [
+      "**/*.test.{ts,tsx}",
+      "**/*.stories.{ts,tsx}",
+      ".storybook/**/*.{ts,tsx}",
+      "e2e/**",
+      "src/test-setup.ts",
+      "*.config.{ts,js}",
+    ],
     rules: { "react-refresh/only-export-components": "off" },
   },
   prettier,

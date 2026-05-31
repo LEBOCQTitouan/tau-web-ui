@@ -56,6 +56,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm vitest run
       - run: pnpm build
+      - run: pnpm build-storybook
 
   e2e:
     runs-on: ubuntu-latest

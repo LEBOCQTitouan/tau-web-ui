@@ -4,44 +4,44 @@ import { formatTokens, formatDuration } from "./run-utils";
 
 export function RunsTable({ runs, onOpen }: { runs: Run[]; onOpen: (id: string) => void }) {
   if (runs.length === 0) {
-    return <p style={{ color: "#888" }}>No runs yet. Launch one above.</p>;
+    return <p className="text-sm text-muted">No runs yet. Launch one above.</p>;
   }
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr
-          style={{ textAlign: "left", borderBottom: "1px solid #ddd", fontSize: 13, color: "#666" }}
-        >
-          <th>Agent</th>
-          <th>Status</th>
-          <th>Substrate/Mode</th>
-          <th>Started</th>
-          <th>Duration</th>
-          <th>Tokens</th>
-        </tr>
-      </thead>
-      <tbody>
-        {runs.map((r) => (
-          <tr
-            key={r.id}
-            onClick={() => onOpen(r.id)}
-            style={{ cursor: "pointer", borderBottom: "1px solid #f0f0f0" }}
-          >
-            <td style={{ padding: "6px 4px" }}>{r.agent_id}</td>
-            <td>
-              <StatusBadge status={r.status} />
-            </td>
-            <td>
-              <SubstrateModeBadge substrate={r.substrate} mode={r.mode} />
-            </td>
-            <td style={{ fontSize: 12, color: "#666" }}>
-              {r.started_at.replace("T", " ").slice(0, 19)}
-            </td>
-            <td style={{ fontSize: 12 }}>{formatDuration(r)}</td>
-            <td style={{ fontSize: 12 }}>{formatTokens(r)}</td>
+    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs text-muted">
+            <th className="px-3 py-2 font-medium">Agent</th>
+            <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-3 py-2 font-medium">Substrate/Mode</th>
+            <th className="px-3 py-2 font-medium">Started</th>
+            <th className="px-3 py-2 font-medium">Duration</th>
+            <th className="px-3 py-2 font-medium">Tokens</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {runs.map((r) => (
+            <tr
+              key={r.id}
+              onClick={() => onOpen(r.id)}
+              className="cursor-pointer border-b border-border last:border-0 hover:bg-bg"
+            >
+              <td className="px-3 py-2 font-medium">{r.agent_id}</td>
+              <td className="px-3 py-2">
+                <StatusBadge status={r.status} />
+              </td>
+              <td className="px-3 py-2">
+                <SubstrateModeBadge substrate={r.substrate} mode={r.mode} />
+              </td>
+              <td className="px-3 py-2 font-mono text-xs text-muted">
+                {r.started_at.replace("T", " ").slice(0, 19)}
+              </td>
+              <td className="px-3 py-2 text-xs">{formatDuration(r)}</td>
+              <td className="px-3 py-2 text-xs">{formatTokens(r)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

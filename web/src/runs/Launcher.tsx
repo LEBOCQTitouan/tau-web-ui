@@ -23,8 +23,13 @@ export function Launcher() {
   }
 
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-      <select value={selected} onChange={(e) => setAgent(e.target.value)} aria-label="agent">
+    <div className="mb-4 flex items-center gap-2">
+      <select
+        value={selected}
+        onChange={(e) => setAgent(e.target.value)}
+        aria-label="agent"
+        className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs"
+      >
         {agents.map((a) => (
           <option key={a} value={a}>
             {a}
@@ -32,14 +37,18 @@ export function Launcher() {
         ))}
       </select>
       <input
-        style={{ flex: 1 }}
+        className="flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-accent"
         placeholder="Prompt…"
         value={prompt}
         aria-label="prompt"
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onRun()}
       />
-      <button onClick={onRun} disabled={busy || !selected}>
+      <button
+        onClick={onRun}
+        disabled={busy || !selected}
+        className="rounded-md bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-50"
+      >
         {busy ? "Running…" : "Run"}
       </button>
     </div>

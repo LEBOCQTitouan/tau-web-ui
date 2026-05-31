@@ -13,8 +13,8 @@ export function RunsView() {
   }, [refreshRuns]);
 
   return (
-    <section style={{ padding: 16 }}>
-      <h2 style={{ fontSize: 16 }}>Runs</h2>
+    <section className="p-4">
+      <h2 className="mb-3 text-base font-semibold">Runs</h2>
       <Launcher />
       <RunsTable runs={runs} onOpen={openTrace} />
     </section>

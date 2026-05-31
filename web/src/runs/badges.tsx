@@ -9,7 +9,9 @@ const STATUS_CLASS: Record<Run["status"], string> = {
 
 export function StatusBadge({ status }: { status: Run["status"] }) {
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[status]}`}>
+    <span
+      className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[status]}`}
+    >
       {status}
     </span>
   );

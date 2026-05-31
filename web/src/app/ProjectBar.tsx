@@ -9,29 +9,13 @@ export function ProjectBar() {
   }, [loadProject]);
 
   return (
-    <header
-      style={{
-        display: "flex",
-        gap: 16,
-        alignItems: "center",
-        padding: "8px 16px",
-        borderBottom: "1px solid #ddd",
-        background: "#fafafa",
-      }}
-    >
-      <strong>tau-web-ui</strong>
-      <span style={{ fontSize: 12, color: "#666" }}>{project?.project_path ?? "connecting…"}</span>
-      <span style={{ fontSize: 12, color: "#666", marginLeft: "auto" }}>
-        tau {project?.tau_version ?? "—"}
-      </span>
+    <header className="flex items-center gap-4 border-b border-border bg-surface px-4 py-2">
+      <strong className="text-sm">tau-web-ui</strong>
+      <span className="font-mono text-xs text-muted">{project?.project_path ?? "connecting…"}</span>
+      <span className="ml-auto text-xs text-muted">tau {project?.tau_version ?? "—"}</span>
       <span
         title={project ? "engine reachable" : "no engine"}
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 5,
-          background: project ? "#16a34a" : "#dc2626",
-        }}
+        className={`h-2.5 w-2.5 rounded-full ${project ? "bg-st-ok" : "bg-st-error"}`}
       />
     </header>
   );

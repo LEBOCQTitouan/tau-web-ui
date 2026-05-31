@@ -3,3 +3,7 @@
 /web/dist
 /.tau-web-ui
 *.log
+*.tsbuildinfo
+/web/test-results/
+/web/playwright-report/
+/.superpowers/

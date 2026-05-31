@@ -12,6 +12,9 @@ use tokio::io::AsyncWriteExt;
 
 use crate::trace::{Event, Run, Span};
 
+/// The full replay result: run header, deduplicated spans, and all events in file order.
+pub type TraceReplay = (Run, Vec<Span>, Vec<Event>);
+
 /// One persisted line.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "record", rename_all = "snake_case")]
@@ -66,7 +69,7 @@ impl RunStore {
     }
 
     /// Replay one run: latest header + spans folded by id (latest wins) + events.
-    pub fn load(&self, run_id: &str) -> Result<Option<(Run, Vec<Span>)>> {
+    pub fn load(&self, run_id: &str) -> Result<Option<TraceReplay>> {
         let path = self.path(run_id);
         if !path.exists() {
             return Ok(None);
@@ -74,16 +77,17 @@ impl RunStore {
         let text = std::fs::read_to_string(path)?;
         let mut run: Option<Run> = None;
         let mut spans: BTreeMap<String, Span> = BTreeMap::new();
+        let mut events: Vec<Event> = vec![];
         for line in text.lines().filter(|l| !l.trim().is_empty()) {
             match serde_json::from_str::<Record>(line)? {
                 Record::RunHeader(r) => run = Some(r),
                 Record::Span(s) => {
                     spans.insert(s.id.clone(), s);
                 }
-                Record::Event(_) => {}
+                Record::Event(e) => events.push(e),
             }
         }
-        Ok(run.map(|r| (r, spans.into_values().collect())))
+        Ok(run.map(|r| (r, spans.into_values().collect(), events)))
     }
 
     /// Index every run file into a Runs list (headers only), newest first.
@@ -100,7 +104,7 @@ impl RunStore {
                 .unwrap()
                 .to_string_lossy()
                 .to_string();
-            if let Some((run, _)) = self.load(&id)? {
+            if let Some((run, _, _)) = self.load(&id)? {
                 runs.push(run);
             }
         }
@@ -173,7 +177,7 @@ mod tests {
             .await
             .unwrap();
 
-        let (r, spans) = store.load("R1").unwrap().unwrap();
+        let (r, spans, _events) = store.load("R1").unwrap().unwrap();
         assert_eq!(r.status, RunStatus::Completed);
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0].status, SpanStatus::Ok);

@@ -29,7 +29,7 @@ async fn launch_completes_and_persists() {
                 assert_eq!(run.status, RunStatus::Completed);
                 assert!(run.token_usage.is_some());
                 assert!(run.total_turns.is_some());
-                let (r2, spans) = state.load_trace(&run_id).unwrap();
+                let (r2, spans, _) = state.load_trace(&run_id).unwrap();
                 assert_eq!(r2.status, RunStatus::Completed);
                 assert!(spans.iter().any(|s| s.name == "fs-read"));
                 return;

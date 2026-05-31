@@ -1,3 +1,4 @@
+import type { Event } from "../types/Event";
 import type { Run } from "../types/Run";
 import type { Span } from "../types/Span";
 import type { WsMessage } from "../types/WsMessage";
@@ -16,6 +17,7 @@ export interface Health {
 export interface Trace {
   run: Run;
   spans: Span[];
+  events: Event[];
 }
 
 async function json<T>(res: Response): Promise<T> {

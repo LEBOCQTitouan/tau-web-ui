@@ -144,6 +144,7 @@ pub enum WsMessage {
     Snapshot {
         run: Run,
         spans: Vec<Span>,
+        events: Vec<Event>,
     },
     SpanUpdate {
         span: Span,

@@ -6,4 +6,4 @@ import type { Span } from "./Span";
 /**
  * What the WS pushes to the browser: a tagged union of incremental updates.
  */
-export type WsMessage = { "type": "snapshot", run: Run, spans: Array<Span>, } | { "type": "span_update", span: Span, } | { "type": "event", event: Event, } | { "type": "run_update", run: Run, };
+export type WsMessage = { "type": "snapshot", run: Run, spans: Array<Span>, events: Array<Event>, } | { "type": "span_update", span: Span, } | { "type": "event", event: Event, } | { "type": "run_update", run: Run, };

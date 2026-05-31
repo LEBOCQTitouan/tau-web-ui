@@ -22,9 +22,9 @@ async fn handle(mut socket: WebSocket, state: AppState, run_id: String) {
     let mut rx = state.subscribe(&run_id).await;
 
     // Replay current persisted state.
-    if let Some((run, spans)) = state.load_trace(&run_id) {
+    if let Some((run, spans, events)) = state.load_trace(&run_id) {
         let terminal = run.status != RunStatus::Running;
-        let snap = WsMessage::Snapshot { run, spans };
+        let snap = WsMessage::Snapshot { run, spans, events };
         if send(&mut socket, &snap).await.is_err() {
             return;
         }

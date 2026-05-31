@@ -23,6 +23,7 @@ describe("store.applyWs", () => {
       type: "snapshot",
       run: { id: "R1", status: "running" } as any,
       spans: [span("s1", "running")],
+      events: [],
     } as WsMessage);
     expect(useStore.getState().currentTrace?.run.id).toBe("R1");
     expect(useStore.getState().currentTrace?.spans).toHaveLength(1);
@@ -34,6 +35,7 @@ describe("store.applyWs", () => {
       type: "snapshot",
       run: { id: "R1", status: "running" } as any,
       spans: [span("s1", "running")],
+      events: [],
     } as WsMessage);
     s.applyWs({ type: "span_update", span: span("s1", "ok") } as WsMessage);
     const spans = useStore.getState().currentTrace!.spans;
@@ -47,6 +49,7 @@ describe("store.applyWs", () => {
       type: "snapshot",
       run: { id: "R1", status: "running" } as any,
       spans: [],
+      events: [],
     } as WsMessage);
     s.applyWs({
       type: "event",
@@ -59,12 +62,26 @@ describe("store.applyWs", () => {
     expect(useStore.getState().assistantText).toBe("Hello");
   });
 
+  it("snapshot reconstructs assistant text from text_delta events", () => {
+    useStore.getState().applyWs({
+      type: "snapshot",
+      run: { id: "R1", status: "running" } as any,
+      spans: [],
+      events: [
+        { run_id: "R1", span_id: "t1", ts: "t", kind: "text_delta", payload: { text: "He" } },
+        { run_id: "R1", span_id: "t1", ts: "t", kind: "text_delta", payload: { text: "llo" } },
+      ],
+    } as WsMessage);
+    expect(useStore.getState().assistantText).toBe("Hello");
+  });
+
   it("run_update updates status", () => {
     const s = useStore.getState();
     s.applyWs({
       type: "snapshot",
       run: { id: "R1", status: "running" } as any,
       spans: [],
+      events: [],
     } as WsMessage);
     s.applyWs({ type: "run_update", run: { id: "R1", status: "completed" } as any } as WsMessage);
     expect(useStore.getState().currentTrace!.run.status).toBe("completed");

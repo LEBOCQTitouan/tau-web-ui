@@ -53,7 +53,9 @@ pub async fn get_one(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
     match state.load_trace(&id) {
-        Some((run, spans)) => Ok(Json(json!({ "run": run, "spans": spans }))),
+        Some((run, spans, events)) => Ok(Json(
+            json!({ "run": run, "spans": spans, "events": events }),
+        )),
         None => Err(StatusCode::NOT_FOUND),
     }
 }

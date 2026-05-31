@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Event } from "../types/Event";
 import type { Run } from "../types/Run";
 import type { Span } from "../types/Span";
 import type { WsMessage } from "../types/WsMessage";
@@ -39,6 +40,13 @@ interface AppStore {
   applyWs: (m: WsMessage) => void;
 }
 
+function assistantTextFromEvents(events?: Event[]): string {
+  return (events ?? [])
+    .filter((e) => e.kind === "text_delta")
+    .map((e) => (e.payload as { text?: string }).text ?? "")
+    .join("");
+}
+
 export const useStore = create<AppStore>((set, get) => ({
   health: null,
   project: null,
@@ -68,7 +76,11 @@ export const useStore = create<AppStore>((set, get) => ({
     get().socket?.close();
     // Replay snapshot first (works even with no live engine — AC#5).
     const trace = await getTrace(id);
-    set({ currentTrace: trace, assistantText: "", selectedSpanId: null });
+    set({
+      currentTrace: { run: trace.run, spans: trace.spans },
+      assistantText: assistantTextFromEvents(trace.events),
+      selectedSpanId: null,
+    });
     // If still running, attach live WS (snapshot from WS is idempotent with the REST one).
     if (trace.run.status === "running") {
       const ws = openRunSocket(id, (m) => get().applyWs(m));
@@ -94,7 +106,10 @@ export const useStore = create<AppStore>((set, get) => ({
     const state = get();
     switch (m.type) {
       case "snapshot":
-        set({ currentTrace: { run: m.run, spans: m.spans }, assistantText: "" });
+        set({
+          currentTrace: { run: m.run, spans: m.spans },
+          assistantText: assistantTextFromEvents(m.events),
+        });
         break;
       case "span_update": {
         if (!state.currentTrace) return;

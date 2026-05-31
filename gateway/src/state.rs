@@ -11,7 +11,7 @@ use tokio::sync::{broadcast, Mutex, RwLock};
 use crate::adapters::serve::ServeAdapter;
 use crate::adapters::TraceDelta;
 use crate::serve_client::{RunItem, ServeClient};
-use crate::store::RunStore;
+use crate::store::{RunStore, TraceReplay};
 use crate::trace::*;
 
 #[derive(Clone)]
@@ -97,7 +97,7 @@ impl AppState {
         self.0.runs.read().await.get(id).cloned()
     }
 
-    pub fn load_trace(&self, id: &str) -> Option<(Run, Vec<Span>)> {
+    pub fn load_trace(&self, id: &str) -> Option<TraceReplay> {
         self.0.store.load(id).ok().flatten()
     }
 

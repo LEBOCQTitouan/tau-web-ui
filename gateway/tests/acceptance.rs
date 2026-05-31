@@ -44,7 +44,7 @@ async fn ac3_4_tool_span_and_final_usage() {
     let state = AppState::new(bin(), project(), true, RunStore::new(dir.path()).unwrap());
     let id = state.launch("greeter".into(), "hi".into()).await.unwrap();
     assert_eq!(wait_terminal(&state, &id).await, RunStatus::Completed);
-    let (run, spans) = state.load_trace(&id).unwrap();
+    let (run, spans, _) = state.load_trace(&id).unwrap();
     let tool = spans
         .iter()
         .find(|s| s.name == "fs-read")
@@ -63,10 +63,10 @@ async fn ac5_replay_matches() {
         .await
         .unwrap();
     wait_terminal(&state, &id).await;
-    let (_r1, s1) = state.load_trace(&id).unwrap();
+    let (_r1, s1, _) = state.load_trace(&id).unwrap();
     let state2 = AppState::new(bin(), project(), true, RunStore::new(dir.path()).unwrap());
     state2.rehydrate().await.unwrap();
-    let (_r2, s2) = state2.load_trace(&id).unwrap();
+    let (_r2, s2, _) = state2.load_trace(&id).unwrap();
     assert_eq!(s1.len(), s2.len());
     assert!(s1.iter().any(|s| s.name == "agent.summarizer.spawn"));
 }

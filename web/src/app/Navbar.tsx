@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useStore } from "../store/store";
+import { SaveAsProjectForm } from "../projects/SaveAsProjectForm";
 
 function subRoute(pathname: string, pid: string): string {
   const prefix = `/projects/${pid}/`;
@@ -8,18 +9,21 @@ function subRoute(pathname: string, pid: string): string {
 }
 
 export function Navbar() {
-  const { pid } = useParams();
+  const pid = useStore((s) => s.activeProjectId);
   const projects = useStore((s) => s.projects);
   const project = useStore((s) => s.project);
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
 
-  const activeName = projects.find((p) => p.meta.id === pid)?.meta.name ?? pid ?? "project";
+  const activeName =
+    pid === "" ? "All projects" : (projects.find((p) => p.meta.id === pid)?.meta.name ?? pid);
+  const isWorkspace = pid === "workspace";
 
   function switchTo(nextPid: string) {
     setOpen(false);
-    navigate(`/projects/${nextPid}/${subRoute(pathname, pid ?? "")}`);
+    navigate(`/projects/${nextPid}/${subRoute(pathname, pid)}`);
   }
 
   return (
@@ -59,6 +63,29 @@ export function Navbar() {
           </div>
         )}
       </div>
+
+      {isWorkspace && (
+        <div className="relative">
+          <button
+            aria-label="save as project"
+            onClick={() => setSaveOpen((o) => !o)}
+            className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800"
+          >
+            Unsaved · Save as project
+          </button>
+          {saveOpen && (
+            <div className="absolute left-0 z-10 mt-1 w-80 rounded-md border border-border bg-surface p-2 shadow-lg">
+              <SaveAsProjectForm
+                onSaved={(m) => {
+                  setSaveOpen(false);
+                  navigate(`/projects/${m.id}/dashboard`);
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <span className="ml-auto font-mono text-xs text-muted">
         {project?.project_path ?? "connecting…"}
       </span>

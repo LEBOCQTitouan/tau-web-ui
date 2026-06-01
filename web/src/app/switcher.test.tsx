@@ -10,32 +10,19 @@ function Probe() {
   return <div data-testid="loc">{pathname}</div>;
 }
 
-function setup(pid = "demo") {
+function setup() {
   useStore.setState({
     project: null,
+    activeProjectId: "demo",
     projects: [
-      {
-        meta: { id: "demo", name: "demo", path: "/p", source: { kind: "local" } },
-        summary: {},
-      } as never,
-      {
-        meta: { id: "acme-bot", name: "acme-bot", path: "/q", source: { kind: "local" } },
-        summary: {},
-      } as never,
+      { meta: { id: "demo", name: "demo", path: "/p", source: { kind: "local" } }, summary: {} } as never,
+      { meta: { id: "acme-bot", name: "acme-bot", path: "/q", source: { kind: "local" } }, summary: {} } as never,
     ],
   });
   render(
-    <MemoryRouter initialEntries={[`/projects/${pid}/runs`]}>
+    <MemoryRouter initialEntries={["/projects/demo/runs"]}>
       <Routes>
-        <Route
-          path="/projects/:pid/*"
-          element={
-            <>
-              <Navbar />
-              <Probe />
-            </>
-          }
-        />
+        <Route path="/projects/:pid/*" element={<><Navbar /><Probe /></>} />
         <Route path="/" element={<Probe />} />
       </Routes>
     </MemoryRouter>,
@@ -45,7 +32,7 @@ function setup(pid = "demo") {
 describe("project switcher", () => {
   it("switches to another project preserving the sub-route", async () => {
     const user = userEvent.setup();
-    setup("demo");
+    setup();
     await user.click(screen.getByLabelText("project switcher"));
     await user.click(screen.getByRole("button", { name: "acme-bot" }));
     expect(screen.getByTestId("loc")).toHaveTextContent("/projects/acme-bot/runs");

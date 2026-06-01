@@ -159,7 +159,12 @@ impl ProjectRegistry {
     /// Build the AppState for a project path under a per-project store dir and
     /// rehydrate it, then insert under its (already-final) id.
     async fn insert_entry(&self, meta: ProjectMeta) -> Result<()> {
-        let store_dir = self.0.data_root.join("projects").join(&meta.id).join("runs");
+        let store_dir = self
+            .0
+            .data_root
+            .join("projects")
+            .join(&meta.id)
+            .join("runs");
         let store = RunStore::new(&store_dir)?;
         let state = AppState::new(
             self.0.bin.clone(),
@@ -178,7 +183,11 @@ impl ProjectRegistry {
 
     /// Allocate a collision-free id for `base` (slugged display name).
     async fn unique_id(&self, base: &str) -> ProjectId {
-        let base = if base.is_empty() { "project".into() } else { slug(base) };
+        let base = if base.is_empty() {
+            "project".into()
+        } else {
+            slug(base)
+        };
         let map = self.0.projects.read().await;
         if !map.contains_key(&base) {
             return base;
@@ -203,10 +212,7 @@ impl ProjectRegistry {
             .ok()
             .map(|c| c.name)
             .filter(|n| !n.is_empty())
-            .or_else(|| {
-                path.file_name()
-                    .map(|s| s.to_string_lossy().to_string())
-            })
+            .or_else(|| path.file_name().map(|s| s.to_string_lossy().to_string()))
             .unwrap_or_else(|| "project".into());
         Ok(name)
     }
@@ -247,7 +253,9 @@ impl ProjectRegistry {
             id,
             name,
             path: dest.to_string_lossy().to_string(),
-            source: ProjectSource::Git { url: url.to_string() },
+            source: ProjectSource::Git {
+                url: url.to_string(),
+            },
         };
         self.insert_entry(meta.clone()).await?;
         self.write_manifest().await?;
@@ -276,12 +284,23 @@ impl ProjectRegistry {
 
     /// Resolve a project's AppState by id (None if unknown).
     pub async fn state(&self, id: &str) -> Option<AppState> {
-        self.0.projects.read().await.get(id).map(|e| e.state.clone())
+        self.0
+            .projects
+            .read()
+            .await
+            .get(id)
+            .map(|e| e.state.clone())
     }
 
     /// All project metas in insertion order.
     pub async fn metas(&self) -> Vec<ProjectMeta> {
-        self.0.projects.read().await.values().map(|e| e.meta.clone()).collect()
+        self.0
+            .projects
+            .read()
+            .await
+            .values()
+            .map(|e| e.meta.clone())
+            .collect()
     }
 
     /// Recent runs across all projects, newest first. `status` (if set) filters
@@ -344,7 +363,10 @@ async fn summarize(
     state: &AppState,
 ) -> ProjectSummary {
     let total = runs.len() as u32;
-    let running = runs.iter().filter(|r| r.status == RunStatus::Running).count() as u32;
+    let running = runs
+        .iter()
+        .filter(|r| r.status == RunStatus::Running)
+        .count() as u32;
     let terminal: Vec<&Run> = runs
         .iter()
         .filter(|r| r.status != RunStatus::Running)
@@ -369,7 +391,10 @@ async fn summarize(
         .map(|u| u.input_tokens as u64 + u.output_tokens as u64)
         .sum();
     let last_activity = runs.iter().map(|r| r.started_at.clone()).max();
-    let agents = state.config_read().map(|c| c.agents.len() as u32).unwrap_or(0);
+    let agents = state
+        .config_read()
+        .map(|c| c.agents.len() as u32)
+        .unwrap_or(0);
     let engine_ok = state.engine_alive_cached().await;
     ProjectSummary {
         runs: total,
@@ -383,11 +408,11 @@ async fn summarize(
     }
 }
 
-fn within_24h(
-    ended_at: Option<&str>,
-    now: Option<chrono::DateTime<chrono::FixedOffset>>,
-) -> bool {
-    match (ended_at.and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()), now) {
+fn within_24h(ended_at: Option<&str>, now: Option<chrono::DateTime<chrono::FixedOffset>>) -> bool {
+    match (
+        ended_at.and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()),
+        now,
+    ) {
         (Some(ended), Some(now)) => (now - ended).num_hours() < 24 && now >= ended,
         _ => false,
     }

@@ -23,7 +23,10 @@ pub async fn cross_runs(
     State(reg): State<ProjectRegistry>,
     Query(q): Query<CrossQuery>,
 ) -> Json<Vec<CrossProjectRun>> {
-    Json(reg.cross_runs(q.status.as_deref(), q.limit.unwrap_or(50)).await)
+    Json(
+        reg.cross_runs(q.status.as_deref(), q.limit.unwrap_or(50))
+            .await,
+    )
 }
 
 #[derive(Deserialize)]

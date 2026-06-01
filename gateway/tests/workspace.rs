@@ -32,6 +32,19 @@ async fn workspace_is_auto_provisioned() {
 }
 
 #[tokio::test]
+async fn workspace_is_not_persisted_to_manifest() {
+    let data = tempfile::tempdir().unwrap();
+    let proj = make_project("demo");
+    let reg = ProjectRegistry::load(bin(), true, data.path().to_path_buf())
+        .await
+        .unwrap();
+    reg.add_local(proj.path()).await.unwrap(); // triggers write_manifest
+    let manifest = std::fs::read_to_string(data.path().join("projects.json")).unwrap();
+    assert!(!manifest.contains("workspace"), "manifest leaked workspace: {manifest}");
+    assert!(manifest.contains("demo"));
+}
+
+#[tokio::test]
 async fn user_project_named_workspace_dedupes() {
     let data = tempfile::tempdir().unwrap();
     let proj = make_project("workspace");

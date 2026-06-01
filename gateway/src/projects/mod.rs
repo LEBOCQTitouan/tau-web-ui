@@ -140,12 +140,15 @@ impl ProjectRegistry {
     }
 
     async fn write_manifest(&self) -> Result<()> {
+        // The built-in workspace is re-ensured each start and must never be
+        // persisted to projects.json.
         let metas: Vec<ProjectMeta> = self
             .0
             .projects
             .read()
             .await
             .values()
+            .filter(|e| e.meta.id != WORKSPACE_ID)
             .map(|e| e.meta.clone())
             .collect();
         let text = serde_json::to_string_pretty(&metas)?;

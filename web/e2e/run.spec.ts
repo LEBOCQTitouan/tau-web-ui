@@ -90,3 +90,34 @@ test("add a project by path from the home", async ({ page }) => {
   await page.getByRole("button", { name: "Add path" }).click();
   await expect(page.getByText(/failed to add/i)).toHaveCount(0);
 });
+
+test("create, edit, and delete an agent", async ({ page }) => {
+  await page.goto("/projects/demo/agents");
+  await expect(page.getByRole("heading", { name: /^agents$/i })).toBeVisible({ timeout: 5000 });
+
+  // create
+  await page.getByRole("link", { name: /new agent/i }).click();
+  await page.getByLabel("agent id").fill("e2e-bot");
+  await page.getByLabel("display name").fill("E2E Bot");
+  await page.getByLabel("llm backend").fill("anthropic");
+  await page.getByLabel("system prompt").fill("you are an e2e bot");
+  await page.getByRole("button", { name: "+ Add tool" }).click();
+  await page.getByLabel("tool name 0").fill("fs-read");
+  await page.getByLabel("tool source 0").fill("https://example.com/fs-read.git");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+
+  // back in the index, the new agent appears
+  await page.goto("/projects/demo/agents");
+  await expect(page.getByRole("link", { name: "e2e-bot" })).toBeVisible({ timeout: 5000 });
+
+  // edit the prompt
+  await page.getByRole("link", { name: "e2e-bot" }).click();
+  await expect(page.getByLabel("display name")).toHaveValue("E2E Bot");
+  await page.getByLabel("system prompt").fill("updated prompt");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+
+  // delete
+  await page.goto("/projects/demo/agents/e2e-bot");
+  await page.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByRole("link", { name: "e2e-bot" })).toHaveCount(0);
+});

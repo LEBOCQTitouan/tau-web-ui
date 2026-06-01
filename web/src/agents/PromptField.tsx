@@ -18,7 +18,11 @@ export function PromptField({
   return (
     <div className="space-y-1.5">
       <div className="flex gap-1">
-        <button type="button" className={tab(mode === "system")} onClick={() => onModeChange("system")}>
+        <button
+          type="button"
+          className={tab(mode === "system")}
+          onClick={() => onModeChange("system")}
+        >
           Inline
         </button>
         <button type="button" className={tab(mode === "file")} onClick={() => onModeChange("file")}>

@@ -14,8 +14,24 @@ function renderAt(path: string) {
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/projects/:pid/agents/new" element={<><AgentEditorPage /><Probe /></>} />
-        <Route path="/projects/:pid/agents/:agentId" element={<><AgentEditorPage /><Probe /></>} />
+        <Route
+          path="/projects/:pid/agents/new"
+          element={
+            <>
+              <AgentEditorPage />
+              <Probe />
+            </>
+          }
+        />
+        <Route
+          path="/projects/:pid/agents/:agentId"
+          element={
+            <>
+              <AgentEditorPage />
+              <Probe />
+            </>
+          }
+        />
       </Routes>
     </MemoryRouter>,
   );

@@ -15,7 +15,7 @@ use crate::config::{self, AgentDetail};
 use crate::packages::{name_from_url, CliOps, MockOps, Package, PackageOps, VerifyResult};
 use crate::plugins::{self, PluginDetail, PluginsSource};
 use crate::serve_client::{RunItem, ServeClient};
-use crate::ship::{self, Bundle, BuildError, ShipSource, Target};
+use crate::ship::{self, BuildError, Bundle, ShipSource, Target};
 use crate::skills::{self, InstalledSkills, SkillDetail, SkillSummary};
 use crate::store::{RunStore, TraceReplay};
 use crate::tools::{self, ToolDetail, ToolsSource};

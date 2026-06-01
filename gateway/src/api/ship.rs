@@ -1,7 +1,7 @@
 use axum::{http::StatusCode, Json};
 
 use crate::api::scope::Scoped;
-use crate::ship::{Bundle, BuildRequest, Target};
+use crate::ship::{BuildRequest, Bundle, Target};
 
 pub async fn targets(Scoped(state): Scoped) -> Json<Vec<Target>> {
     Json(state.list_targets())

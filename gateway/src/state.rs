@@ -15,8 +15,8 @@ use crate::config::{self, AgentDetail};
 use crate::packages::{name_from_url, CliOps, MockOps, Package, PackageOps, VerifyResult};
 use crate::serve_client::{RunItem, ServeClient};
 use crate::skills::{self, InstalledSkills, SkillDetail, SkillSummary};
-use crate::tools::{self, ToolDetail, ToolsSource};
 use crate::store::{RunStore, TraceReplay};
+use crate::tools::{self, ToolDetail, ToolsSource};
 use crate::trace::*;
 use crate::workflow::{MockRunner, WorkflowItem, WorkflowRunner};
 

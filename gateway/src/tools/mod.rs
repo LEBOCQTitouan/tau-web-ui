@@ -56,7 +56,11 @@ impl ToolsSource for MockTools {
             used_by: vec![],
         };
         vec![
-            tool("fs-read", "1.0.0", cap("fs.read", "paths", &["${WORKDIR}/**"])),
+            tool(
+                "fs-read",
+                "1.0.0",
+                cap("fs.read", "paths", &["${WORKDIR}/**"]),
+            ),
             tool("shell", "0.2.0", cap("process.spawn", "commands", &["sh"])),
             tool("web-search", "1.2.0", cap("net.http", "hosts", &["*"])),
         ]
@@ -134,7 +138,10 @@ mod tests {
         let tools = list_tools(&demo(), &MockTools);
         let fsr = tools.iter().find(|t| t.name == "fs-read").unwrap();
         // the seeded `critic` skill requires fs-read
-        assert!(fsr.used_by.iter().any(|u| u.kind == "skill" && u.name == "critic"));
+        assert!(fsr
+            .used_by
+            .iter()
+            .any(|u| u.kind == "skill" && u.name == "critic"));
         let shell = tools.iter().find(|t| t.name == "shell").unwrap();
         assert!(shell.used_by.is_empty());
     }

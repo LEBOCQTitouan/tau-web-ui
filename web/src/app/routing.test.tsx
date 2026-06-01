@@ -25,7 +25,7 @@ function at(path: string) {
 describe("routing", () => {
   it("renders the Projects home at /", () => {
     at("/");
-    expect(screen.getByText(/projects home/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^projects$/i })).toBeInTheDocument();
   });
 
   it("renders the Runs page at /projects/demo/runs", () => {
@@ -60,6 +60,6 @@ describe("routing", () => {
 
   it("redirects unknown top-level paths to the home", () => {
     at("/nope");
-    expect(screen.getByText(/projects home/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^projects$/i })).toBeInTheDocument();
   });
 });

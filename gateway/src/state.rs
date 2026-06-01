@@ -15,6 +15,7 @@ use crate::config::{self, AgentDetail};
 use crate::packages::{name_from_url, CliOps, MockOps, Package, PackageOps, VerifyResult};
 use crate::plugins::{self, PluginDetail, PluginsSource};
 use crate::serve_client::{RunItem, ServeClient};
+use crate::ship::{self, Bundle, BuildError, ShipSource, Target};
 use crate::skills::{self, InstalledSkills, SkillDetail, SkillSummary};
 use crate::store::{RunStore, TraceReplay};
 use crate::tools::{self, ToolDetail, ToolsSource};
@@ -34,6 +35,7 @@ pub struct Inner {
     installed_skills: Box<dyn InstalledSkills>,
     tools_source: Box<dyn ToolsSource>,
     plugins_source: Box<dyn PluginsSource>,
+    ship_source: Box<dyn ShipSource>,
     /// Lazily-spawned serve client (respawned after child death).
     client: Mutex<Option<ServeClient>>,
     /// run_id -> live Run snapshot.
@@ -79,6 +81,16 @@ impl AppState {
         } else {
             Box::new(plugins::CliPlugins)
         };
+        let ship_source: Box<dyn ShipSource> = if is_mock {
+            let project_name = project
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("project")
+                .to_string();
+            Box::new(ship::MockShip::new(project_name))
+        } else {
+            Box::new(ship::CliShip)
+        };
         AppState(Arc::new(Inner {
             bin,
             project,
@@ -89,6 +101,7 @@ impl AppState {
             installed_skills,
             tools_source,
             plugins_source,
+            ship_source,
             client: Mutex::new(None),
             runs: RwLock::new(HashMap::new()),
             serve_ids: RwLock::new(HashMap::new()),
@@ -483,6 +496,18 @@ impl AppState {
 
     pub fn list_plugins(&self) -> Vec<PluginDetail> {
         plugins::list_plugins(self.0.plugins_source.as_ref())
+    }
+
+    pub fn list_targets(&self) -> Vec<Target> {
+        self.0.ship_source.list_targets()
+    }
+
+    pub fn list_bundles(&self) -> Vec<Bundle> {
+        self.0.ship_source.list_bundles()
+    }
+
+    pub fn build(&self, target: &str) -> Result<Bundle, BuildError> {
+        self.0.ship_source.build(target)
     }
 
     pub fn list_agents(&self) -> Result<Vec<AgentDetail>> {

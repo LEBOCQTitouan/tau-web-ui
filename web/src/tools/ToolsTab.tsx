@@ -62,7 +62,9 @@ function ToolRow({
         </td>
         <td className="px-2 py-1 text-muted">{tool.version ?? "—"}</td>
         <td className="px-2 py-1 font-mono text-muted">{tool.provides}</td>
-        <td className="px-2 py-1 text-muted">{tool.capabilities.length}</td>
+        <td className="px-2 py-1 font-mono text-muted">
+          {tool.capabilities.map((c) => c.kind).join(", ") || "—"}
+        </td>
         <td className="px-2 py-1 text-muted">{tool.used_by.length}</td>
       </tr>
       {expanded && (

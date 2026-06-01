@@ -37,9 +37,9 @@ describe("ToolsTab", () => {
     await waitFor(() => expect(screen.getByText("fs-read")).toBeInTheDocument());
     expect(screen.getByText("shell")).toBeInTheDocument();
 
-    // expand fs-read
+    // expand fs-read → the expanded detail shows the capability fields + used_by
     await user.click(screen.getByRole("button", { name: /fs-read/i }));
-    expect(screen.getByText(/fs\.read/)).toBeInTheDocument();
+    expect(screen.getByText(/paths=\[/)).toBeInTheDocument();
     expect(screen.getByText("critic")).toBeInTheDocument();
   });
 

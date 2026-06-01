@@ -34,3 +34,10 @@ export const removeProject = (pid: string) =>
   fetch(`/api/projects/${pid}`, { method: "DELETE" }).then((res) => {
     if (!res.ok) throw new Error(`${res.status}`);
   });
+
+export const saveWorkspaceAs = (name: string): Promise<ProjectMeta> =>
+  fetch("/api/workspace/save-as", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(json<ProjectMeta>);

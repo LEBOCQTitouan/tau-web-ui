@@ -145,4 +145,29 @@ mod tests {
         let shell = tools.iter().find(|t| t.name == "shell").unwrap();
         assert!(shell.used_by.is_empty());
     }
+
+    #[test]
+    fn list_tools_computes_used_by_from_agent() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("tau.toml"),
+            r#"[project]
+name = "t"
+
+[agents.researcher]
+display_name = "Researcher"
+
+[[agents.researcher.requires.tools]]
+name = "web-search"
+source = "https://example.com/web-search.git"
+"#,
+        )
+        .unwrap();
+        let tools = list_tools(dir.path(), &MockTools);
+        let ws = tools.iter().find(|t| t.name == "web-search").unwrap();
+        assert!(ws
+            .used_by
+            .iter()
+            .any(|u| u.kind == "agent" && u.name == "researcher"));
+    }
 }

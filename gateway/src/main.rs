@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tau_gateway::{api, state::AppState, store::RunStore};
+use tau_gateway::{api, projects::ProjectRegistry};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -10,9 +10,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let args: Vec<String> = std::env::args().collect();
-    let project = flag(&args, "--project")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| std::env::current_dir().unwrap());
+    let project = flag(&args, "--project").map(PathBuf::from);
     let bin = flag(&args, "--tau-bin")
         .map(PathBuf::from)
         .or_else(|| std::env::var("TAU_BIN").ok().map(PathBuf::from))
@@ -22,12 +20,17 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|p| p.parse().ok())
         .unwrap_or(4317);
 
-    let data_dir = dirs_data_dir();
-    let store = RunStore::new(&data_dir)?;
-    let state = AppState::new(bin, project, no_sandbox, store);
-    state.rehydrate().await?;
+    let data_root = data_root();
+    let reg = ProjectRegistry::load(bin, no_sandbox, data_root).await?;
 
-    let app = api::router(state);
+    // Auto-register the --project path (or the cwd if none given) so the existing
+    // single-project launch still lands on a usable project.
+    let initial = project.unwrap_or_else(|| std::env::current_dir().unwrap());
+    if let Err(e) = reg.add_local(&initial).await {
+        tracing::warn!("could not auto-register {}: {e}", initial.display());
+    }
+
+    let app = api::router(reg);
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
     tracing::info!("tau-gateway listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -42,14 +45,12 @@ fn flag(args: &[String], name: &str) -> Option<String> {
         .cloned()
 }
 
-fn dirs_data_dir() -> PathBuf {
+fn data_root() -> PathBuf {
     match std::env::var("HOME") {
-        Ok(home) => PathBuf::from(home).join(".tau-web-ui/runs"),
+        Ok(home) => PathBuf::from(home).join(".tau-web-ui"),
         Err(_) => {
-            tracing::warn!(
-                "$HOME unset; storing run data under ./.tau-web-ui/runs (relative to cwd)"
-            );
-            PathBuf::from(".tau-web-ui/runs")
+            tracing::warn!("$HOME unset; storing data under ./.tau-web-ui (relative to cwd)");
+            PathBuf::from(".tau-web-ui")
         }
     }
 }

@@ -1,6 +1,6 @@
 use futures_util::StreamExt;
 use std::path::PathBuf;
-use tau_gateway::{api, state::AppState, store::RunStore};
+use tau_gateway::{api, projects::ProjectRegistry};
 use tokio_tungstenite::tungstenite::Message;
 
 fn bin() -> PathBuf {
@@ -18,9 +18,13 @@ fn project() -> PathBuf {
 
 #[tokio::test]
 async fn ws_streams_live_then_closes() {
-    let dir = tempfile::tempdir().unwrap();
-    let state = AppState::new(bin(), project(), true, RunStore::new(dir.path()).unwrap());
-    let app = api::router(state.clone());
+    let data = tempfile::tempdir().unwrap();
+    let reg = ProjectRegistry::load(bin(), true, data.path().to_path_buf())
+        .await
+        .unwrap();
+    let meta = reg.add_local(&project()).await.unwrap();
+    let state = reg.state(&meta.id).await.unwrap();
+    let app = api::router(reg);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
@@ -28,7 +32,7 @@ async fn ws_streams_live_then_closes() {
     });
 
     let run_id = state.launch("greeter".into(), "hi".into()).await.unwrap();
-    let url = format!("ws://{addr}/api/runs/{run_id}/events");
+    let url = format!("ws://{addr}/api/projects/{}/runs/{run_id}/events", meta.id);
     let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
 
     let mut saw_snapshot = false;

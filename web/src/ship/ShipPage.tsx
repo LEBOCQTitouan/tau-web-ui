@@ -32,7 +32,9 @@ export function ShipPage() {
         setTarget((cur) => cur || t.find((x) => x.status === "ready")?.name || "");
       })
       .catch(() => {});
-    listBundles().then(setBundles).catch(() => {});
+    listBundles()
+      .then(setBundles)
+      .catch(() => {});
   }, []);
 
   async function onBuild() {
@@ -144,7 +146,9 @@ function TargetCard({ target }: { target: Target }) {
             {target.gate}
           </span>
         ) : (
-          <span className="rounded bg-st-ok-soft px-1 text-[9px] font-medium text-st-ok">ready</span>
+          <span className="rounded bg-st-ok-soft px-1 text-[9px] font-medium text-st-ok">
+            ready
+          </span>
         )}
       </div>
     </div>
@@ -153,9 +157,7 @@ function TargetCard({ target }: { target: Target }) {
 
 function DriftBadge({ drift }: { drift: string }) {
   const tone = drift === "clean" ? "bg-st-ok-soft text-st-ok" : "bg-amber-100 text-amber-800";
-  return (
-    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${tone}`}>{drift}</span>
-  );
+  return <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${tone}`}>{drift}</span>;
 }
 
 function StepTimeline({ steps }: { steps: BuildStep[] }) {

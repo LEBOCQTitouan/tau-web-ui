@@ -219,3 +219,14 @@ test("plugins tab: gated, two-pane describe + protocol-decode", async ({ page })
   await frame.click();
   await expect(page.getByText(/"model": "claude-opus-4"/)).toBeVisible();
 });
+
+test("ship: targets, build host, new bundle with steps", async ({ page }) => {
+  await page.goto("/projects/demo/ship");
+  // host target card rendered (assert the substrate — "host" also appears as a
+  // select option + bundle target cell; Playwright resolves /native/ to the card).
+  await expect(page.getByText(/native/)).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole("button", { name: /^build$/i })).toBeVisible();
+  await page.getByRole("button", { name: /^build$/i }).click();
+  // the build step timeline renders (compile is unique to the timeline)
+  await expect(page.getByText("compile")).toBeVisible({ timeout: 5000 });
+});

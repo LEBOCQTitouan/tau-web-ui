@@ -35,12 +35,9 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string) => {
-      if (url.includes("/targets"))
-        return Promise.resolve({ ok: true, json: async () => targets });
-      if (url.includes("/bundles"))
-        return Promise.resolve({ ok: true, json: async () => bundles });
-      if (url.includes("/build"))
-        return Promise.resolve({ ok: true, json: async () => newBundle });
+      if (url.includes("/targets")) return Promise.resolve({ ok: true, json: async () => targets });
+      if (url.includes("/bundles")) return Promise.resolve({ ok: true, json: async () => bundles });
+      if (url.includes("/build")) return Promise.resolve({ ok: true, json: async () => newBundle });
       return Promise.resolve({ ok: true, json: async () => [] });
     }),
   );
@@ -64,7 +61,9 @@ describe("ShipPage", () => {
   it("builds and prepends the new bundle with its step timeline", async () => {
     const user = userEvent.setup();
     render(<ShipPage />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /^build$/i })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^build$/i })).toBeInTheDocument(),
+    );
     await user.click(screen.getByRole("button", { name: /^build$/i }));
     // the freshly built bundle (unique short hash) appears
     await waitFor(() => expect(screen.getByText("freshbui")).toBeInTheDocument());

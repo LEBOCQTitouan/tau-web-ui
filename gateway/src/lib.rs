@@ -6,6 +6,7 @@ pub mod packages;
 pub mod plugins;
 pub mod projects;
 pub mod serve_client;
+pub mod ship;
 pub mod skills;
 pub mod state;
 pub mod store;

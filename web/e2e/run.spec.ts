@@ -195,3 +195,13 @@ test("nav shell on the overview + workspace save-as", async ({ page }) => {
   await page.goto(page.url().replace("/dashboard", "/agents"));
   await expect(page.getByRole("link", { name: "ws-bot" })).toBeVisible({ timeout: 5000 });
 });
+
+test("tools tab: list + expand shows used_by", async ({ page }) => {
+  await page.goto("/projects/demo/tools");
+  await page.getByRole("button", { name: /^tools$/i }).click();
+  await expect(page.getByRole("button", { name: /fs-read/i })).toBeVisible({ timeout: 5000 });
+  // expand fs-read → capability field detail + used-by critic (the seeded skill requires it)
+  await page.getByRole("button", { name: /fs-read/i }).click();
+  await expect(page.getByText(/paths=\[/)).toBeVisible();
+  await expect(page.getByText("critic")).toBeVisible();
+});

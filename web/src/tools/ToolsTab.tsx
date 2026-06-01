@@ -36,7 +36,12 @@ export function ToolsTab() {
       </thead>
       <tbody>
         {tools.map((t) => (
-          <ToolRow key={t.name} tool={t} expanded={open.has(t.name)} onToggle={() => toggle(t.name)} />
+          <ToolRow
+            key={t.name}
+            tool={t}
+            expanded={open.has(t.name)}
+            onToggle={() => toggle(t.name)}
+          />
         ))}
       </tbody>
     </table>

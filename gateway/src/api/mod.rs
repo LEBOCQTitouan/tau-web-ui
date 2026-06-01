@@ -46,6 +46,7 @@ pub fn router(reg: ProjectRegistry) -> Router {
         .route("/api/health", get(projects::health))
         .route("/api/projects", get(projects::list).post(projects::add))
         .route("/api/projects/runs", get(projects::cross_runs))
+        .route("/api/workspace/save-as", post(projects::save_as))
         .nest("/api/projects/:pid", scoped)
         .with_state(reg)
 }

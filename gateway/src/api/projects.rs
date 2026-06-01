@@ -69,6 +69,21 @@ pub async fn remove(
     }
 }
 
+#[derive(Deserialize)]
+pub struct SaveAsBody {
+    pub path: String,
+}
+
+pub async fn save_as(
+    State(reg): State<ProjectRegistry>,
+    Json(b): Json<SaveAsBody>,
+) -> Result<(StatusCode, Json<ProjectMeta>), (StatusCode, String)> {
+    reg.save_workspace_as(std::path::Path::new(&b.path))
+        .await
+        .map(|m| (StatusCode::CREATED, Json(m)))
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))
+}
+
 /// Global gateway health (no project needed).
 pub async fn health() -> Json<Value> {
     Json(json!({ "gateway_ok": true }))

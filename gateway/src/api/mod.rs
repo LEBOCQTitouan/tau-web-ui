@@ -5,6 +5,7 @@ pub mod agents;
 pub mod config;
 pub mod meta;
 pub mod packages;
+pub mod plugins;
 pub mod projects;
 pub mod runs;
 pub mod scope;
@@ -49,7 +50,8 @@ pub fn router(reg: ProjectRegistry) -> Router {
             "/skills/:name",
             get(skills::get_one).put(skills::put).delete(skills::remove),
         )
-        .route("/tools", get(tools::list));
+        .route("/tools", get(tools::list))
+        .route("/plugins", get(plugins::list));
 
     Router::new()
         .route("/api/health", get(projects::health))

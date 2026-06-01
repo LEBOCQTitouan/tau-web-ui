@@ -1,10 +1,10 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{http::StatusCode, Json};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::state::AppState;
+use crate::api::scope::Scoped;
 
-pub async fn list(State(state): State<AppState>) -> Json<Value> {
+pub async fn list(Scoped(state): Scoped) -> Json<Value> {
     Json(json!({ "workflows": state.list_workflows() }))
 }
 
@@ -15,7 +15,7 @@ pub struct RunBody {
 }
 
 pub async fn run(
-    State(state): State<AppState>,
+    Scoped(state): Scoped,
     Json(body): Json<RunBody>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let run_id = state

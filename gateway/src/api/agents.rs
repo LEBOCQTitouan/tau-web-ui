@@ -1,8 +1,8 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{http::StatusCode, Json};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::state::AppState;
+use crate::api::scope::Scoped;
 
 #[derive(Deserialize)]
 pub struct ImportBody {
@@ -11,7 +11,7 @@ pub struct ImportBody {
 }
 
 pub async fn import(
-    State(state): State<AppState>,
+    Scoped(state): Scoped,
     Json(b): Json<ImportBody>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     state

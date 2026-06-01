@@ -1,14 +1,14 @@
 use axum::{
-    extract::{Path, State},
+    extract::Path,
     http::StatusCode,
     Json,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::state::AppState;
+use crate::api::scope::Scoped;
 
-pub async fn list(State(state): State<AppState>) -> Json<Value> {
+pub async fn list(Scoped(state): Scoped) -> Json<Value> {
     Json(json!({ "packages": state.packages() }))
 }
 
@@ -18,7 +18,7 @@ pub struct InstallBody {
 }
 
 pub async fn install(
-    State(state): State<AppState>,
+    Scoped(state): Scoped,
     Json(b): Json<InstallBody>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     state
@@ -28,8 +28,8 @@ pub async fn install(
 }
 
 pub async fn uninstall(
-    State(state): State<AppState>,
-    Path(name): Path<String>,
+    Scoped(state): Scoped,
+    Path((_pid, name)): Path<(String, String)>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     state
         .package_uninstall(&name)
@@ -43,8 +43,8 @@ pub struct UpdateBody {
 }
 
 pub async fn update(
-    State(state): State<AppState>,
-    Path(name): Path<String>,
+    Scoped(state): Scoped,
+    Path((_pid, name)): Path<(String, String)>,
     Json(b): Json<UpdateBody>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     state
@@ -53,13 +53,13 @@ pub async fn update(
         .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))
 }
 
-pub async fn resolve(State(state): State<AppState>) -> Result<Json<Value>, (StatusCode, String)> {
+pub async fn resolve(Scoped(state): Scoped) -> Result<Json<Value>, (StatusCode, String)> {
     state
         .package_resolve()
         .map(|pkgs| Json(json!({ "packages": pkgs })))
         .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))
 }
 
-pub async fn verify(State(state): State<AppState>) -> Json<Value> {
+pub async fn verify(Scoped(state): Scoped) -> Json<Value> {
     Json(json!({ "results": state.package_verify() }))
 }

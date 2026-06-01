@@ -1,12 +1,12 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, Query},
     http::StatusCode,
     Json,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::state::AppState;
+use crate::api::scope::Scoped;
 use crate::trace::Run;
 
 #[derive(Deserialize)]
@@ -16,7 +16,7 @@ pub struct LaunchBody {
 }
 
 pub async fn launch(
-    State(state): State<AppState>,
+    Scoped(state): Scoped,
     Json(body): Json<LaunchBody>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let run_id = state
@@ -32,7 +32,7 @@ pub struct ListQuery {
     pub agent: Option<String>,
 }
 
-pub async fn list(State(state): State<AppState>, Query(q): Query<ListQuery>) -> Json<Vec<Run>> {
+pub async fn list(Scoped(state): Scoped, Query(q): Query<ListQuery>) -> Json<Vec<Run>> {
     let mut runs = state.list_runs().await;
     if let Some(s) = q.status.as_deref() {
         runs.retain(|r| {
@@ -49,8 +49,8 @@ pub async fn list(State(state): State<AppState>, Query(q): Query<ListQuery>) -> 
 }
 
 pub async fn get_one(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
+    Scoped(state): Scoped,
+    Path((_pid, id)): Path<(String, String)>,
 ) -> Result<Json<Value>, StatusCode> {
     match state.load_trace(&id) {
         Some((run, spans, events)) => Ok(Json(
@@ -60,7 +60,10 @@ pub async fn get_one(
     }
 }
 
-pub async fn cancel(State(state): State<AppState>, Path(id): Path<String>) -> Json<Value> {
+pub async fn cancel(
+    Scoped(state): Scoped,
+    Path((_pid, id)): Path<(String, String)>,
+) -> Json<Value> {
     let cancelled = state.cancel(&id).await.unwrap_or(false);
     Json(json!({ "cancelled": cancelled }))
 }

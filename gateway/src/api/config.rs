@@ -1,13 +1,11 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{http::StatusCode, Json};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use crate::api::scope::Scoped;
 use crate::config::ProjectConfig;
-use crate::state::AppState;
 
-pub async fn get(
-    State(state): State<AppState>,
-) -> Result<Json<ProjectConfig>, (StatusCode, String)> {
+pub async fn get(Scoped(state): Scoped) -> Result<Json<ProjectConfig>, (StatusCode, String)> {
     state
         .config_read()
         .map(Json)
@@ -21,7 +19,7 @@ pub struct PutBody {
 }
 
 pub async fn put(
-    State(state): State<AppState>,
+    Scoped(state): Scoped,
     Json(b): Json<PutBody>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     state

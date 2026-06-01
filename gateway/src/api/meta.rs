@@ -1,9 +1,9 @@
-use axum::{extract::State, Json};
+use axum::Json;
 use serde_json::{json, Value};
 
-use crate::state::AppState;
+use crate::api::scope::Scoped;
 
-pub async fn project(State(state): State<AppState>) -> Json<Value> {
+pub async fn project(Scoped(state): Scoped) -> Json<Value> {
     match state.handshake().await {
         Ok(hs) => Json(json!({
             "project_path": hs.project_path, "agents": hs.agents,
@@ -13,7 +13,7 @@ pub async fn project(State(state): State<AppState>) -> Json<Value> {
     }
 }
 
-pub async fn health(State(state): State<AppState>) -> Json<Value> {
+pub async fn health(Scoped(state): Scoped) -> Json<Value> {
     let (ok, ver) = match state.handshake().await {
         Ok(hs) => (true, hs.server_version),
         Err(_) => (false, String::new()),

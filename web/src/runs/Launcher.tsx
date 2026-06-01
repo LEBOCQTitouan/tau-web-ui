@@ -10,6 +10,7 @@ export function Launcher() {
   const launch = useStore((s) => s.launch);
   const launchWorkflow = useStore((s) => s.launchWorkflow);
   const loadWorkflows = useStore((s) => s.loadWorkflows);
+  const pid = useStore((s) => s.activeProjectId);
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<Mode>("agent");
@@ -36,7 +37,7 @@ export function Launcher() {
           ? await launch(selAgent, prompt)
           : await launchWorkflow(selWorkflow, prompt);
       setPrompt("");
-      navigate(`/runs/${id}`);
+      navigate(`/projects/${pid}/runs/${id}`);
     } finally {
       setBusy(false);
     }

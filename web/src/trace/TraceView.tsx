@@ -13,6 +13,7 @@ type TraceTab = "graph" | "timeline";
 export function TraceView() {
   const trace = useStore((s) => s.currentTrace);
   const selectedId = useStore((s) => s.selectedSpanId);
+  const pid = useStore((s) => s.activeProjectId);
   const navigate = useNavigate();
   const [tab, setTab] = useState<TraceTab>("graph");
   const isWorkflow = trace?.run.source === "log";
@@ -40,7 +41,7 @@ export function TraceView() {
             onChange={setTab}
           />
         </div>
-        <button onClick={() => navigate("/runs")} className="text-xs text-accent">
+        <button onClick={() => navigate(`/projects/${pid}/runs`)} className="text-xs text-accent">
           ← Back to runs
         </button>
       </div>

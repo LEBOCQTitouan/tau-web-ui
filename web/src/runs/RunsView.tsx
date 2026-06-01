@@ -10,6 +10,7 @@ type Filter = "all" | "workflow" | "agent";
 
 export function RunsView() {
   const runs = useStore((s) => s.runs);
+  const pid = useStore((s) => s.activeProjectId);
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("all");
   usePollRuns();
@@ -42,7 +43,7 @@ export function RunsView() {
           </button>
         ))}
       </div>
-      <RunsTable runs={shown} onOpen={(id) => navigate(`/runs/${id}`)} />
+      <RunsTable runs={shown} onOpen={(id) => navigate(`/projects/${pid}/runs/${id}`)} />
     </section>
   );
 }

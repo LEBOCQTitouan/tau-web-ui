@@ -80,7 +80,8 @@ test("projects home lists the project and links into it", async ({ page }) => {
 
 test("add a project by path from the home", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("project path").fill(process.cwd() + "/../fixtures/demo");
+  // Relative path: the gateway canonicalizes it against its own cwd (repo root).
+  await page.getByLabel("project path").fill("fixtures/demo");
   await page.getByRole("button", { name: "Add path" }).click();
   await expect(page.getByText(/failed to add/i)).toHaveCount(0);
 });

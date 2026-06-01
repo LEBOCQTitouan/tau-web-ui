@@ -8,6 +8,7 @@ pub mod packages;
 pub mod projects;
 pub mod runs;
 pub mod scope;
+pub mod skills;
 pub mod workflows;
 pub mod ws;
 
@@ -40,6 +41,12 @@ pub fn router(reg: ProjectRegistry) -> Router {
         .route(
             "/agents/:id",
             get(agents::get_one).put(agents::put).delete(agents::remove),
+        )
+        .route("/skills", get(skills::list))
+        .route("/skills/import", post(skills::import))
+        .route(
+            "/skills/:name",
+            get(skills::get_one).put(skills::put).delete(skills::remove),
         );
 
     Router::new()

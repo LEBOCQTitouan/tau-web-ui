@@ -191,6 +191,86 @@ fn summary_of(d: &SkillDetail) -> SkillSummary {
     }
 }
 
+/// Create/update a local skill's files. `editable`/`source` on the detail are
+/// ignored for writing (a written skill is always local). Validates the name.
+pub fn write_local(project: &Path, detail: &SkillDetail) -> Result<()> {
+    if !valid_skill_name(&detail.name) {
+        bail!("invalid skill name: {}", detail.name);
+    }
+    let dir = skills_dir(project).join(&detail.name);
+    std::fs::create_dir_all(&dir).with_context(|| format!("create {}", dir.display()))?;
+
+    std::fs::write(
+        dir.join("SKILL.md"),
+        render_skill_md(&detail.name, detail.description.as_deref(), &detail.content),
+    )?;
+
+    let mut doc = toml_edit::DocumentMut::new();
+    doc["name"] = toml_edit::value(detail.name.as_str());
+    doc["version"] = toml_edit::value(detail.version.as_deref().unwrap_or("0.1.0"));
+    if let Some(d) = detail.description.as_deref() {
+        doc["description"] = toml_edit::value(d);
+    }
+    doc["authors"] = toml_edit::Item::Value(toml_edit::Array::new().into());
+    doc["source"] = toml_edit::value(format!("local://{}", detail.name));
+    doc["kind"] = toml_edit::value("skill");
+    doc["dependencies"] = toml_edit::Item::Value(toml_edit::Array::new().into());
+
+    // [[capabilities]]
+    let mut caps = toml_edit::ArrayOfTables::new();
+    for c in &detail.capabilities {
+        let mut t = toml_edit::Table::new();
+        t["kind"] = toml_edit::value(c.kind.as_str());
+        for (param, list) in &c.fields {
+            let mut arr = toml_edit::Array::new();
+            for v in list {
+                arr.push(v.as_str());
+            }
+            t[param] = toml_edit::Item::Value(arr.into());
+        }
+        caps.push(t);
+    }
+    doc["capabilities"] = toml_edit::Item::ArrayOfTables(caps);
+
+    // [skill] with requires arrays
+    let mut skill_tbl = toml_edit::Table::new();
+    skill_tbl.set_implicit(true);
+    if !detail.requires_tools.is_empty() {
+        skill_tbl["requires_tools"] = toml_edit::Item::ArrayOfTables(deps_to_aot(&detail.requires_tools));
+    }
+    if !detail.requires_skills.is_empty() {
+        skill_tbl["requires_skills"] = toml_edit::Item::ArrayOfTables(deps_to_aot(&detail.requires_skills));
+    }
+    doc["skill"] = toml_edit::Item::Table(skill_tbl);
+
+    std::fs::write(dir.join("tau.toml"), doc.to_string())?;
+    Ok(())
+}
+
+fn deps_to_aot(deps: &[PackageDep]) -> toml_edit::ArrayOfTables {
+    let mut aot = toml_edit::ArrayOfTables::new();
+    for d in deps {
+        let mut t = toml_edit::Table::new();
+        t["name"] = toml_edit::value(d.name.as_str());
+        t["source"] = toml_edit::value(d.source.as_str());
+        if let Some(v) = d.version.as_deref().filter(|s| !s.is_empty()) {
+            t["version"] = toml_edit::value(v);
+        }
+        aot.push(t);
+    }
+    aot
+}
+
+/// Remove a local skill dir. Returns false if absent.
+pub fn delete_local(project: &Path, name: &str) -> Result<bool> {
+    let dir = skills_dir(project).join(name);
+    if !dir.join("SKILL.md").exists() {
+        return Ok(false);
+    }
+    std::fs::remove_dir_all(&dir).with_context(|| format!("remove {}", dir.display()))?;
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,5 +313,49 @@ mod tests {
         let rendered = render_skill_md("x", Some("d"), "body line");
         let (n2, _, _) = parse_skill_md(&rendered);
         assert_eq!(n2.as_deref(), Some("x"));
+    }
+
+    #[test]
+    fn write_then_read_roundtrips() {
+        let d = tempfile::tempdir().unwrap();
+        let detail = SkillDetail {
+            name: "summariser".into(),
+            description: Some("Summarises text.".into()),
+            version: Some("0.2.0".into()),
+            source: "ignored".into(),
+            editable: true,
+            content: "You summarise.".into(),
+            capabilities: vec![Capability {
+                kind: "net.http".into(),
+                fields: BTreeMap::from([
+                    ("hosts".to_string(), vec!["api.example.com".to_string()]),
+                    ("methods".to_string(), vec!["GET".to_string()]),
+                ]),
+            }],
+            requires_tools: vec![PackageDep {
+                name: "web-search".into(),
+                source: "https://x/web.git".into(),
+                version: Some("^1".into()),
+            }],
+            requires_skills: vec![],
+        };
+        write_local(d.path(), &detail).unwrap();
+
+        let back = read_local(d.path(), "summariser").unwrap().unwrap();
+        assert_eq!(back.description.as_deref(), Some("Summarises text."));
+        assert_eq!(back.version.as_deref(), Some("0.2.0"));
+        assert_eq!(back.content.trim(), "You summarise.");
+        assert_eq!(back.capabilities[0].kind, "net.http");
+        assert_eq!(back.capabilities[0].fields["hosts"], vec!["api.example.com"]);
+        assert_eq!(back.capabilities[0].fields["methods"], vec!["GET"]);
+        assert_eq!(back.requires_tools[0].name, "web-search");
+
+        assert!(delete_local(d.path(), "summariser").unwrap());
+        assert!(read_local(d.path(), "summariser").unwrap().is_none());
+        assert!(!delete_local(d.path(), "summariser").unwrap());
+
+        let mut bad = detail.clone();
+        bad.name = "Bad Name".into();
+        assert!(write_local(d.path(), &bad).is_err());
     }
 }

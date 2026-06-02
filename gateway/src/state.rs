@@ -13,6 +13,7 @@ use crate::adapters::serve::ServeAdapter;
 use crate::adapters::TraceDelta;
 use crate::checks::{self, CheckReport, CheckSource};
 use crate::config::{self, AgentDetail};
+use crate::graph::{self, WorkflowGraph, WorkflowGraphSource};
 use crate::packages::{name_from_url, CliOps, MockOps, Package, PackageOps, VerifyResult};
 use crate::plugins::{self, PluginDetail, PluginsSource};
 use crate::serve_client::{RunItem, ServeClient};
@@ -38,6 +39,7 @@ pub struct Inner {
     plugins_source: Box<dyn PluginsSource>,
     ship_source: Box<dyn ShipSource>,
     check_source: Box<dyn CheckSource>,
+    graph_source: Box<dyn WorkflowGraphSource>,
     /// Lazily-spawned serve client (respawned after child death).
     client: Mutex<Option<ServeClient>>,
     /// run_id -> live Run snapshot.
@@ -98,6 +100,11 @@ impl AppState {
         } else {
             Box::new(checks::CliChecks)
         };
+        let graph_source: Box<dyn WorkflowGraphSource> = if is_mock {
+            Box::new(graph::MockGraph)
+        } else {
+            Box::new(graph::CliGraph)
+        };
         AppState(Arc::new(Inner {
             bin,
             project,
@@ -110,6 +117,7 @@ impl AppState {
             plugins_source,
             ship_source,
             check_source,
+            graph_source,
             client: Mutex::new(None),
             runs: RwLock::new(HashMap::new()),
             serve_ids: RwLock::new(HashMap::new()),
@@ -520,6 +528,10 @@ impl AppState {
 
     pub fn checks(&self) -> CheckReport {
         self.0.check_source.report()
+    }
+
+    pub fn workflow_graph(&self, name: &str) -> WorkflowGraph {
+        self.0.graph_source.graph(name)
     }
 
     pub fn list_agents(&self) -> Result<Vec<AgentDetail>> {

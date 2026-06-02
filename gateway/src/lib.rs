@@ -1,6 +1,7 @@
 //! tau-gateway: local service fronting `tau serve` behind a stable HTTP+WS API.
 pub mod adapters;
 pub mod api;
+pub mod checks;
 pub mod config;
 pub mod packages;
 pub mod plugins;

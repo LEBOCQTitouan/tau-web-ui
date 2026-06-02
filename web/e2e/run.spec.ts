@@ -240,3 +240,15 @@ test("health: checks findings + filter + gated conformance", async ({ page }) =>
   await expect(page.getByText("TAU-LOCK-STALE")).toBeVisible();
   await expect(page.getByText("TAU-CONFIG-ENDPOINT")).toHaveCount(0);
 });
+
+test("workflows: graph editor renders + edit mode is gated", async ({ page }) => {
+  await page.goto("/projects/demo/workflows");
+  await expect(page.getByRole("combobox", { name: /workflow/i })).toBeVisible({ timeout: 5000 });
+  // React Flow rendered the workflow nodes (assert the canvas node class — "gather"
+  // text appears in both the canvas and the inspector, so don't match on it).
+  await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 5000 });
+  // enter edit mode → local banner + the gated Build button
+  await page.getByRole("button", { name: /^edit$/i }).click();
+  await expect(page.getByText(/changes are local/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /build from ir/i })).toBeDisabled();
+});

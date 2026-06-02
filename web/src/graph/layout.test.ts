@@ -5,9 +5,30 @@ import type { WorkflowGraph } from "../types/WorkflowGraph";
 const nightly: WorkflowGraph = {
   workflow: "nightly-research",
   nodes: [
-    { id: "gather", kind: "agent.run", label: "gather", agent: "researcher", tool: null, input: "${input}" },
-    { id: "summarise", kind: "agent.run", label: "summarise", agent: "greeter", tool: null, input: "${steps.gather.output}" },
-    { id: "save-results", kind: "tool.call", label: "save-results", agent: null, tool: "fs-write", input: "${steps.summarise.output}" },
+    {
+      id: "gather",
+      kind: "agent.run",
+      label: "gather",
+      agent: "researcher",
+      tool: null,
+      input: "${input}",
+    },
+    {
+      id: "summarise",
+      kind: "agent.run",
+      label: "summarise",
+      agent: "greeter",
+      tool: null,
+      input: "${steps.gather.output}",
+    },
+    {
+      id: "save-results",
+      kind: "tool.call",
+      label: "save-results",
+      agent: null,
+      tool: "fs-write",
+      input: "${steps.summarise.output}",
+    },
   ],
   edges: [
     { source: "gather", target: "summarise" },
@@ -18,8 +39,22 @@ const nightly: WorkflowGraph = {
 const disconnected: WorkflowGraph = {
   workflow: "build-report",
   nodes: [
-    { id: "collect", kind: "agent.run", label: "collect", agent: "researcher", tool: null, input: null },
-    { id: "render", kind: "tool.call", label: "render", agent: null, tool: "fs-write", input: null },
+    {
+      id: "collect",
+      kind: "agent.run",
+      label: "collect",
+      agent: "researcher",
+      tool: null,
+      input: null,
+    },
+    {
+      id: "render",
+      kind: "tool.call",
+      label: "render",
+      agent: null,
+      tool: "fs-write",
+      input: null,
+    },
   ],
   edges: [],
 };

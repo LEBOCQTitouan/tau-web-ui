@@ -52,7 +52,10 @@ export function GraphEditor() {
     (c: NodeChange[]) => setNodes((ns) => applyNodeChanges(c, ns) as Node<StepNodeData>[]),
     [],
   );
-  const onEdgesChange = useCallback((c: EdgeChange[]) => setEdges((es) => applyEdgeChanges(c, es)), []);
+  const onEdgesChange = useCallback(
+    (c: EdgeChange[]) => setEdges((es) => applyEdgeChanges(c, es)),
+    [],
+  );
   const onConnect = useCallback((c: Connection) => setEdges((es) => addEdge(c, es)), []);
 
   function addStep(kind: "agent.run" | "tool.call") {

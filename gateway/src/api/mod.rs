@@ -4,6 +4,7 @@
 pub mod agents;
 pub mod checks;
 pub mod config;
+pub mod graph;
 pub mod meta;
 pub mod packages;
 pub mod plugins;
@@ -34,6 +35,7 @@ pub fn router(reg: ProjectRegistry) -> Router {
         .route("/runs/:id/events", get(ws::ws_handler))
         .route("/workflows", get(workflows::list))
         .route("/workflows/run", post(workflows::run))
+        .route("/workflows/:name/graph", get(graph::graph))
         .route("/packages", get(packages::list))
         .route("/packages/install", post(packages::install))
         .route("/packages/resolve", post(packages::resolve))

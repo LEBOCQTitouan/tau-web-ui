@@ -69,7 +69,13 @@ impl WorkflowGraphSource for MockGraph {
             "nightly-research" => WorkflowGraph {
                 workflow: name.into(),
                 nodes: vec![
-                    node("gather", "agent.run", Some("researcher"), None, Some("${input}")),
+                    node(
+                        "gather",
+                        "agent.run",
+                        Some("researcher"),
+                        None,
+                        Some("${input}"),
+                    ),
                     node(
                         "summarise",
                         "agent.run",
@@ -85,12 +91,21 @@ impl WorkflowGraphSource for MockGraph {
                         Some("${steps.summarise.output}"),
                     ),
                 ],
-                edges: vec![edge("gather", "summarise"), edge("summarise", "save-results")],
+                edges: vec![
+                    edge("gather", "summarise"),
+                    edge("summarise", "save-results"),
+                ],
             },
             "build-report" => WorkflowGraph {
                 workflow: name.into(),
                 nodes: vec![
-                    node("collect", "agent.run", Some("researcher"), None, Some("${input}")),
+                    node(
+                        "collect",
+                        "agent.run",
+                        Some("researcher"),
+                        None,
+                        Some("${input}"),
+                    ),
                     node("render", "tool.call", None, Some("fs-write"), None),
                 ],
                 edges: vec![],

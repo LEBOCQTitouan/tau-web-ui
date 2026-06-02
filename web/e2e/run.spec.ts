@@ -230,3 +230,13 @@ test("ship: targets, build host, new bundle with steps", async ({ page }) => {
   // the build step timeline renders (compile is unique to the timeline)
   await expect(page.getByText("compile")).toBeVisible({ timeout: 5000 });
 });
+
+test("health: checks findings + filter + gated conformance", async ({ page }) => {
+  await page.goto("/projects/demo/health");
+  await expect(page.getByText("TAU-CONFIG-ENDPOINT")).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(/waits on tau β\.6/i)).toBeVisible();
+  // filter by the lockfile chip → the config error finding disappears
+  await page.getByRole("button", { name: /lockfile/i }).click();
+  await expect(page.getByText("TAU-LOCK-STALE")).toBeVisible();
+  await expect(page.getByText("TAU-CONFIG-ENDPOINT")).toHaveCount(0);
+});

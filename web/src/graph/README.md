@@ -1,13 +1,21 @@
-# Graph editor (surface ①) — DEFERRED SEAM
+# Graph editor (surface ①)
 
-Not built in v1. Home for the Workflow-IR authoring canvas (handoff spec §1.3 / §4).
+Built in this directory: the Workflow graph editor (gated β.2). See
+`docs/superpowers/specs/2026-06-02-workflow-graph-editor-design.md`.
 
-When tau β.2 Workflow IR (framing D) lands:
+- `GraphEditor.tsx` — view-by-default editor (workflow picker, View↔Edit toggle,
+  node inspector, add-step palette, gated "Build from IR").
+- `GraphCanvas.tsx` + `StepNode.tsx` — the `@xyflow/react` canvas, shared in spirit
+  with `trace/TraceGraph.tsx`; edit mode only differs by enabling drag/connect/add.
+- `layout.ts` — pure `workflowToFlow` (deterministic DAG layout).
 
-- Add `GraphEditor.tsx` reusing the same `@xyflow/react` canvas as `trace/TraceGraph.tsx`
-  but editable (add/remove nodes = IR declarations).
-- Add a `declarations` module + IR (de)serializer.
-- Gateway gains `POST /api/build-from-ir`.
+Graph data is mock-first via the gateway `WorkflowGraphSource` seam
+(`gateway/src/graph/mod.rs`); `GET /api/projects/:pid/workflows/:name/graph`.
 
-The trace canvas and the editor canvas share React Flow; only edit affordances differ.
-This file marks the seam so adding ① is additive, not a restructure.
+## Still deferred (the remaining seam — tau β.2 Workflow IR, framing D)
+
+- **Edits don't persist.** Edit mode mutates local React state only; "Build from IR"
+  is gated/disabled.
+- When tau ships the Workflow IR: add a `declarations` module + IR (de)serializer,
+  wire `CliGraph` to parse `workflows/*.toml` (replacing the mock), and add
+  `POST /api/build-from-ir` so the edited graph can be saved back.

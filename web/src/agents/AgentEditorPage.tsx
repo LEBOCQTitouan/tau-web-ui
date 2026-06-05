@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import type { AgentDetail } from "../types/AgentDetail";
 import type { AgentPrompt } from "../types/AgentPrompt";
+import type { Provider } from "../types/Provider";
 import { getAgent, putAgent, deleteAgent } from "../api/agents";
+import { getProviders } from "../api/providers";
 import { PromptField } from "./PromptField";
 import { RequiresToolsEditor } from "./RequiresToolsEditor";
 
@@ -35,6 +37,22 @@ export function AgentEditorPage() {
       })
       .catch(() => setError("could not load agent"));
   }, [isNew, agentId]);
+
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const recommended = providers.find((p) => p.recommended)?.name ?? "";
+
+  useEffect(() => {
+    getProviders()
+      .then((ps) => {
+        if (!Array.isArray(ps)) return;
+        setProviders(ps);
+        if (isNew) {
+          const rec = ps.find((p) => p.recommended)?.name;
+          if (rec) setA((prev) => (prev.llm_backend ? prev : { ...prev, llm_backend: rec }));
+        }
+      })
+      .catch(() => {});
+  }, [isNew]);
 
   const label = "mb-1 block text-[10px] uppercase tracking-wide text-muted";
   const input = "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs";
@@ -118,15 +136,36 @@ export function AgentEditorPage() {
               onChange={(e) => set({ package: e.target.value || null })}
             />
           </div>
-          <div className="w-40">
-            <label className={label}>llm_backend</label>
+          <div className="w-56">
+            <label className={label}>llm provider</label>
             <input
+              list="llm-providers"
               aria-label="llm backend"
               className={input}
               placeholder="anthropic"
               value={a.llm_backend ?? ""}
               onChange={(e) => set({ llm_backend: e.target.value || null })}
             />
+            <datalist id="llm-providers">
+              {providers.map((p) => (
+                <option key={p.name} value={p.name} />
+              ))}
+            </datalist>
+            <div className="mt-1 flex items-center gap-2">
+              {recommended && (
+                <button
+                  type="button"
+                  onClick={() => set({ llm_backend: recommended })}
+                  className="rounded-full bg-st-ok-soft px-2 py-0.5 text-[9px] font-semibold text-st-ok"
+                  title="use the recommended provider"
+                >
+                  ✓ recommended: {recommended}
+                </button>
+              )}
+              <Link to={`/projects/${pid}/providers`} className="text-[9px] text-accent">
+                ⚙ Manage providers…
+              </Link>
+            </div>
           </div>
         </div>
         <div>

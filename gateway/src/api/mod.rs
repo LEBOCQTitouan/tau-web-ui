@@ -9,6 +9,7 @@ pub mod meta;
 pub mod packages;
 pub mod plugins;
 pub mod projects;
+pub mod providers;
 pub mod runs;
 pub mod scope;
 pub mod ship;
@@ -42,6 +43,7 @@ pub fn router(reg: ProjectRegistry) -> Router {
         .route("/packages/verify", post(packages::verify))
         .route("/packages/:name", delete(packages::uninstall))
         .route("/packages/:name/update", post(packages::update))
+        .route("/providers", get(providers::list))
         .route("/agents", get(agents::list))
         .route("/agents/import", post(agents::import))
         .route(

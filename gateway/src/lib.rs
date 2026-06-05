@@ -7,6 +7,7 @@ pub mod graph;
 pub mod packages;
 pub mod plugins;
 pub mod projects;
+pub mod providers;
 pub mod serve_client;
 pub mod ship;
 pub mod skills;

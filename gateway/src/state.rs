@@ -16,6 +16,7 @@ use crate::config::{self, AgentDetail};
 use crate::graph::{self, WorkflowGraph, WorkflowGraphSource};
 use crate::packages::{name_from_url, CliOps, MockOps, Package, PackageOps, VerifyResult};
 use crate::plugins::{self, PluginDetail, PluginsSource};
+use crate::providers::{self, Provider};
 use crate::serve_client::{RunItem, ServeClient};
 use crate::ship::{self, BuildError, Bundle, ShipSource, Target};
 use crate::skills::{self, InstalledSkills, SkillDetail, SkillSummary};
@@ -540,6 +541,14 @@ impl AppState {
 
     pub fn read_agent(&self, id: &str) -> Result<Option<AgentDetail>> {
         config::read_agent(&self.0.project, id)
+    }
+
+    pub fn providers(&self) -> Vec<Provider> {
+        let agent_backends: Vec<String> = config::read(&self.0.project)
+            .map(|c| c.agents.into_iter().filter_map(|a| a.llm_backend).collect())
+            .unwrap_or_default();
+        let package_names: Vec<String> = self.packages().into_iter().map(|p| p.name).collect();
+        providers::list_providers(&agent_backends, &package_names)
     }
 
     pub fn write_agent(&self, agent: &AgentDetail) -> Result<()> {

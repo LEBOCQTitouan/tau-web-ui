@@ -12,10 +12,10 @@ use ts_rs::TS;
 #[ts(export)]
 pub struct Provider {
     pub name: String,
-    pub installed: bool,          // name is an installed package
-    pub recommended: bool,        // name == the resolved recommended backend
-    pub source: String,           // "in-use" | "well-known"
-    pub credentials_gated: bool,  // true in v1 (β.5)
+    pub installed: bool,         // name is an installed package
+    pub recommended: bool,       // name == the resolved recommended backend
+    pub source: String,          // "in-use" | "well-known"
+    pub credentials_gated: bool, // true in v1 (β.5)
 }
 
 const WELL_KNOWN: &[&str] = &["anthropic", "openai", "local"];

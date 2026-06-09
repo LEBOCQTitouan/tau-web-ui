@@ -17,6 +17,7 @@ const GROUPS: { title: string | null; items: Item[] }[] = [
       { to: "tools", label: "Tools & Skills", icon: "⚒" },
       { to: "packages", label: "Packages", icon: "▣" },
       { to: "config", label: "Config & Caps", icon: "⚙", gated: true },
+      { to: "providers", label: "Providers", icon: "⚡" },
     ],
   },
   {

@@ -4,6 +4,7 @@ import { ProjectScope } from "./app/ProjectScope";
 import { ConfigPage } from "./config/ConfigPage";
 import { DashboardPage } from "./dashboard/DashboardPage";
 import { PackagesPage } from "./packages/PackagesPage";
+import { ProvidersPage } from "./providers/ProvidersPage";
 import { RunsPage } from "./runs/RunsPage";
 import { TracePage } from "./trace/TracePage";
 import { ProjectsHome } from "./projects/ProjectsHome";
@@ -32,6 +33,7 @@ export function App() {
           <Route path="tools/skills/:name" element={<SkillEditorPage />} />
           <Route path="packages" element={<PackagesPage />} />
           <Route path="config" element={<ConfigPage />} />
+          <Route path="providers" element={<ProvidersPage />} />
           <Route path="runs" element={<RunsPage />} />
           <Route path="runs/:id" element={<TracePage />} />
           <Route path="ship" element={<ShipPage />} />

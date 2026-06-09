@@ -144,16 +144,12 @@ impl Credentials {
         // Propagate a serialization failure rather than truncating the file to "".
         let text = toml::to_string_pretty(c)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        std::fs::write(self.config_path(), text)?;
-        set_0600(&self.config_path());
-        Ok(())
+        write_secure(&self.config_path(), text.as_bytes())
     }
     fn write_secrets(&self, s: &BTreeMap<String, String>) -> std::io::Result<()> {
         let text = serde_json::to_string_pretty(s)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        std::fs::write(self.secrets_path(), text)?;
-        set_0600(&self.secrets_path());
-        Ok(())
+        write_secure(&self.secrets_path(), text.as_bytes())
     }
 
     fn status_for(
@@ -248,13 +244,39 @@ impl Credentials {
     }
 }
 
+/// Write `bytes` to `path` such that the file is never observable with looser
+/// permissions than 0600: write to a sibling temp file created with mode 0600,
+/// then atomically `rename` it into place. A reader of `path` sees either the old
+/// file or the fully-written new one — never a partial or world-readable secret.
+fn write_secure(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let tmp = path.with_extension("tmp");
+    {
+        let mut f = open_0600(&tmp)?;
+        f.write_all(bytes)?;
+        f.sync_all().ok();
+    }
+    std::fs::rename(&tmp, path)
+}
+
 #[cfg(unix)]
-fn set_0600(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
-    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+fn open_0600(path: &Path) -> std::io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
 }
 #[cfg(not(unix))]
-fn set_0600(_path: &Path) {}
+fn open_0600(path: &Path) -> std::io::Result<std::fs::File> {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(path)
+}
 
 #[cfg(test)]
 mod resolver_tests {

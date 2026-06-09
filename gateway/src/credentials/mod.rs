@@ -110,6 +110,15 @@ struct BackendConfig {
 /// Serializes credential writes process-wide (one gateway → one `data_root`).
 static WRITE_LOCK: Mutex<()> = Mutex::new(());
 
+/// Why a `put` failed — lets the API map validation to 422 and I/O to 500.
+#[derive(Debug)]
+pub enum PutError {
+    /// Bad request (gated kind, duplicate kind, empty env ref) → HTTP 422.
+    Invalid(String),
+    /// A write to the data dir failed (disk full, permissions, …) → HTTP 500.
+    Io(std::io::Error),
+}
+
 /// The credential store, bound to a gateway `data_root`. Reads are lock-free;
 /// writes take `WRITE_LOCK` to serialize the read-modify-write of both files.
 pub struct Credentials {
@@ -190,24 +199,29 @@ impl Credentials {
     }
 
     /// Set a backend's ordered sources (+ optional write-only Local value).
-    /// `Err(msg)` → the caller maps to HTTP 422.
+    /// `PutError::Invalid` → HTTP 422; `PutError::Io` → HTTP 500.
     pub fn put(
         &self,
         backend: &str,
         sources: Vec<SourceConfig>,
         local_value: Option<String>,
-    ) -> Result<BackendCredentialStatus, String> {
+    ) -> Result<BackendCredentialStatus, PutError> {
         let mut seen = HashSet::new();
         for s in &sources {
             if s.kind.gated() {
-                return Err(format!("source kind {:?} is gated in CR-1", s.kind));
+                return Err(PutError::Invalid(format!(
+                    "source kind {:?} is gated in CR-1",
+                    s.kind
+                )));
             }
             if matches!(s.kind, SourceKind::Env) && s.reference.as_deref().unwrap_or("").is_empty()
             {
-                return Err("env source requires a non-empty ref".to_string());
+                return Err(PutError::Invalid(
+                    "env source requires a non-empty ref".to_string(),
+                ));
             }
             if !seen.insert(s.kind) {
-                return Err("duplicate source kind".to_string());
+                return Err(PutError::Invalid("duplicate source kind".to_string()));
             }
         }
 
@@ -226,12 +240,13 @@ impl Credentials {
             }
             (true, None) => {} // keep existing local value
         }
-        self.write_config(&cfg).map_err(|e| e.to_string())?;
-        self.write_secrets(&secrets).map_err(|e| e.to_string())?;
+        self.write_config(&cfg).map_err(PutError::Io)?;
+        self.write_secrets(&secrets).map_err(PutError::Io)?;
         Ok(self.status_for(backend, cfg.backends.get(backend).unwrap(), &secrets))
     }
 
-    /// Remove a backend's config + secret.
+    /// Remove a backend's config + secret. Idempotent: deleting an unconfigured
+    /// backend succeeds (no-op), so the API returns 200 rather than 404.
     pub fn delete(&self, backend: &str) -> std::io::Result<()> {
         let _guard = WRITE_LOCK.lock().unwrap();
         let mut cfg = self.read_config();
@@ -254,7 +269,7 @@ fn write_secure(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     {
         let mut f = open_0600(&tmp)?;
         f.write_all(bytes)?;
-        f.sync_all().ok();
+        let _ = f.sync_all(); // best-effort flush; rename below is the durability gate
     }
     std::fs::rename(&tmp, path)
 }
@@ -450,5 +465,31 @@ mod store_tests {
             )
             .unwrap();
         assert!(!st.resolved);
+    }
+
+    #[test]
+    fn re_put_with_local_but_no_value_keeps_the_existing_secret() {
+        let dir = tempfile::tempdir().unwrap();
+        let c = Credentials::new(dir.path().to_path_buf());
+        c.put(
+            "anthropic",
+            vec![cfg(SourceKind::Local, None)],
+            Some("v".into()),
+        )
+        .unwrap();
+        // re-order/edit sources keeping a Local source, but send no new value
+        let st = c
+            .put(
+                "anthropic",
+                vec![
+                    cfg(SourceKind::Local, None),
+                    cfg(SourceKind::Env, Some("X")),
+                ],
+                None,
+            )
+            .unwrap();
+        // the existing local value is retained → still resolves via local
+        assert!(st.resolved);
+        assert_eq!(st.resolved_via, Some(SourceKind::Local));
     }
 }

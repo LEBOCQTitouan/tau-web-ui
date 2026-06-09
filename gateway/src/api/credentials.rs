@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 
-use crate::credentials::{BackendCredentialStatus, SourceConfig};
+use crate::credentials::{BackendCredentialStatus, PutError, SourceConfig};
 use crate::projects::ProjectRegistry;
 
 pub async fn list(State(reg): State<ProjectRegistry>) -> Json<Vec<BackendCredentialStatus>> {
@@ -25,7 +25,10 @@ pub async fn put(
     reg.credentials()
         .put(&backend, body.sources, body.local_value)
         .map(Json)
-        .map_err(|e| (StatusCode::UNPROCESSABLE_ENTITY, e))
+        .map_err(|e| match e {
+            PutError::Invalid(m) => (StatusCode::UNPROCESSABLE_ENTITY, m),
+            PutError::Io(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+        })
 }
 
 pub async fn remove(

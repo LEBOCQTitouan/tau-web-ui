@@ -546,7 +546,13 @@ impl AppState {
                 .and_then(|id| config::read_agent(&self.0.project, id).ok().flatten());
             match detail {
                 Some(a) => {
-                    n.provider = Some(a.llm_backend.unwrap_or_else(|| recommended.clone()));
+                    // An empty `llm_backend` falls back like a missing one, matching
+                    // `recommended_backend`'s own empty-string guard.
+                    n.provider = Some(
+                        a.llm_backend
+                            .filter(|b| !b.is_empty())
+                            .unwrap_or_else(|| recommended.clone()),
+                    );
                     n.tools = a.requires_tools.into_iter().map(|t| t.name).collect();
                 }
                 None => n.provider = Some(recommended.clone()),

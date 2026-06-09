@@ -15,18 +15,42 @@ export function StepNode({ id, data, selected }: NodeProps<Node<StepNodeData>>) 
         position={Position.Top}
         className="flex gap-0.5 rounded-md bg-fg px-1 py-0.5 text-bg"
       >
-        <button type="button" title="inspect" className={tbtn} onClick={() => actions.onInspect(id)}>
+        <button
+          type="button"
+          title="inspect"
+          aria-label="inspect"
+          className={tbtn}
+          onClick={() => actions.onInspect(id)}
+        >
           ⊙
         </button>
         {actions.editable && (
           <>
-            <button type="button" title="disable" className={tbtn} onClick={() => actions.onDisable(id)}>
+            <button
+              type="button"
+              title="disable"
+              aria-label="disable"
+              className={tbtn}
+              onClick={() => actions.onDisable(id)}
+            >
               ⏸
             </button>
-            <button type="button" title="duplicate" className={tbtn} onClick={() => actions.onDuplicate(id)}>
+            <button
+              type="button"
+              title="duplicate"
+              aria-label="duplicate"
+              className={tbtn}
+              onClick={() => actions.onDuplicate(id)}
+            >
               ⧉
             </button>
-            <button type="button" title="delete" className={tbtn} onClick={() => actions.onDelete(id)}>
+            <button
+              type="button"
+              title="delete"
+              aria-label="delete"
+              className={tbtn}
+              onClick={() => actions.onDelete(id)}
+            >
               🗑
             </button>
           </>

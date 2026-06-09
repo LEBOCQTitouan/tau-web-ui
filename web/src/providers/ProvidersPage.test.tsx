@@ -4,8 +4,20 @@ import userEvent from "@testing-library/user-event";
 import { ProvidersPage } from "./ProvidersPage";
 
 const providers = [
-  { name: "anthropic", installed: true, recommended: true, source: "well-known", credentials_gated: true },
-  { name: "openai", installed: false, recommended: false, source: "well-known", credentials_gated: true },
+  {
+    name: "anthropic",
+    installed: true,
+    recommended: true,
+    source: "well-known",
+    credentials_gated: true,
+  },
+  {
+    name: "openai",
+    installed: false,
+    recommended: false,
+    source: "well-known",
+    credentials_gated: true,
+  },
 ];
 
 beforeEach(() => {

@@ -261,3 +261,13 @@ test("agents: provider combobox shows the recommended provider", async ({ page }
   // and the field pre-filled with it
   await expect(page.getByLabel("llm backend")).toHaveValue("anthropic");
 });
+
+test("providers: screen lists anthropic installed with a gated Set API key", async ({ page }) => {
+  await page.goto("/projects/demo/providers");
+  await expect(page.getByRole("heading", { name: "Providers" })).toBeVisible({ timeout: 5000 });
+  // the anthropic row: installed + recommended, and a disabled (gated) Set API key
+  const row = page.getByRole("row").filter({ hasText: "anthropic" });
+  await expect(row.getByText("✓ installed")).toBeVisible();
+  await expect(row.getByText("✓ recommended")).toBeVisible();
+  await expect(row.getByRole("button", { name: /Set API key/i })).toBeDisabled();
+});

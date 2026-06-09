@@ -271,3 +271,15 @@ test("providers: screen lists anthropic installed with a gated Set API key", asy
   await expect(row.getByText("✓ recommended")).toBeVisible();
   await expect(row.getByRole("button", { name: /Set API key/i })).toBeDisabled();
 });
+
+test("workflows: graph shows provider pill on an agent node + a minimap", async ({ page }) => {
+  await page.goto("/projects/demo/workflows");
+  // the React Flow canvas renders nodes (gated editor still displays the graph)
+  await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 5000 });
+  // an agent.run node carries a provider pill (demo agents resolve to anthropic)
+  await expect(page.getByText(/⚡ anthropic/).first()).toBeVisible();
+  // Level-2 chrome: the minimap renders
+  await expect(page.locator(".react-flow__minimap")).toBeVisible();
+  // Save → IR remains gated
+  await expect(page.getByRole("button", { name: /build from ir/i })).toBeDisabled();
+});

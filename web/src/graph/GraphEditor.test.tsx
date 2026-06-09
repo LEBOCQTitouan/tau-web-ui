@@ -61,7 +61,13 @@ beforeEach(() => {
         return Promise.resolve({
           ok: true,
           json: async () => [
-            { name: "anthropic", installed: true, recommended: true, source: "well-known", credentials_gated: true },
+            {
+              name: "anthropic",
+              installed: true,
+              recommended: true,
+              source: "well-known",
+              credentials_gated: true,
+            },
           ],
         });
       return Promise.resolve({ ok: true, json: async () => ({}) });

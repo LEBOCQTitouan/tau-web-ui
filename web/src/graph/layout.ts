@@ -9,9 +9,10 @@ export interface StepNodeData extends Record<string, unknown> {
   input: string | null;
   provider: string | null;
   tools: string[];
+  disabled?: boolean;
 }
 
-const X_GAP = 220;
+export const X_GAP = 220;
 const Y_GAP = 70;
 
 /**
@@ -62,6 +63,7 @@ export function workflowToFlow(graph: WorkflowGraph): {
     id: `${e.source}->${e.target}`,
     source: e.source,
     target: e.target,
+    type: "step",
   }));
 
   return { nodes, edges };

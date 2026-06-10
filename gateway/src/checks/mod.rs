@@ -7,12 +7,21 @@ use ts_rs::TS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
+pub struct FindingLocation {
+    pub path: String,
+    pub line: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct CheckFinding {
-    pub category: String, // "config"|"lockfile"|"pkg"|"sandbox"|"plugin"|"skill"
-    pub severity: String, // "error" | "warning" | "note"
-    pub rule: String,
-    pub message: String,
-    pub location: Option<String>, // "tau.toml:3" | None
+    pub category: String,  // config|lockfile|packages|sandbox|plugins|skills
+    pub severity: String,  // error | needs-setup | warning
+    pub rule: String,      // tau's rule_id
+    pub summary: String,
+    pub detail: Option<String>,
+    pub remediation: Option<String>,
+    pub location: Option<FindingLocation>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -21,7 +30,7 @@ pub struct CategoryStatus {
     pub name: String,
     pub errors: u32,
     pub warnings: u32,
-    pub notes: u32, // pass = all zero
+    pub needs_setup: u32, // pass = all zero
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -46,28 +55,26 @@ pub trait CheckSource: Send + Sync {
     fn report(&self) -> CheckReport;
 }
 
-fn cat(name: &str, errors: u32, warnings: u32, notes: u32) -> CategoryStatus {
-    CategoryStatus {
-        name: name.into(),
-        errors,
-        warnings,
-        notes,
-    }
+fn cat(name: &str, errors: u32, warnings: u32, needs_setup: u32) -> CategoryStatus {
+    CategoryStatus { name: name.into(), errors, warnings, needs_setup }
 }
 
 fn finding(
     category: &str,
     severity: &str,
     rule: &str,
-    message: &str,
-    location: Option<&str>,
+    summary: &str,
+    remediation: Option<&str>,
+    location: Option<(&str, Option<u32>)>,
 ) -> CheckFinding {
     CheckFinding {
         category: category.into(),
         severity: severity.into(),
         rule: rule.into(),
-        message: message.into(),
-        location: location.map(|s| s.to_string()),
+        summary: summary.into(),
+        detail: None,
+        remediation: remediation.map(|s| s.to_string()),
+        location: location.map(|(p, l)| FindingLocation { path: p.into(), line: l }),
     }
 }
 
@@ -78,32 +85,23 @@ impl CheckSource for MockChecks {
         CheckReport {
             categories: vec![
                 cat("config", 1, 0, 0),
-                cat("lockfile", 0, 1, 0),
-                cat("pkg", 0, 0, 0),
-                cat("sandbox", 0, 0, 1),
-                cat("plugin", 0, 0, 0),
-                cat("skill", 0, 0, 0),
+                cat("lockfile", 0, 0, 1),
+                cat("packages", 0, 0, 0),
+                cat("sandbox", 0, 0, 0),
+                cat("plugins", 0, 0, 0),
+                cat("skills", 0, 0, 0),
             ],
             findings: vec![
                 finding(
-                    "config",
-                    "error",
-                    "TAU-CONFIG-ENDPOINT",
+                    "config", "error", "tau.config.endpoint",
                     "inference.endpoint not set",
-                    Some("tau.toml:3"),
+                    Some("set inference.endpoint in tau.toml"),
+                    Some(("tau.toml", Some(3))),
                 ),
                 finding(
-                    "lockfile",
-                    "warning",
-                    "TAU-LOCK-STALE",
-                    "lockfile is stale vs tau.toml — run `tau resolve`",
-                    Some("tau.lock:1"),
-                ),
-                finding(
-                    "sandbox",
-                    "note",
-                    "TAU-SANDBOX-TIER",
-                    "sandbox tier: seatbelt (macOS)",
+                    "lockfile", "needs-setup", "tau.lockfile.missing",
+                    "no lockfile — packages not installed",
+                    Some("run `tau install`"),
                     None,
                 ),
             ],
@@ -143,16 +141,17 @@ mod tests {
         let names: Vec<&str> = r.categories.iter().map(|c| c.name.as_str()).collect();
         assert_eq!(
             names,
-            vec!["config", "lockfile", "pkg", "sandbox", "plugin", "skill"]
+            vec!["config", "lockfile", "packages", "sandbox", "plugins", "skills"]
         );
         let config = r.categories.iter().find(|c| c.name == "config").unwrap();
         assert_eq!(config.errors, 1);
-        let pkg = r.categories.iter().find(|c| c.name == "pkg").unwrap();
-        assert_eq!((pkg.errors, pkg.warnings, pkg.notes), (0, 0, 0));
-        assert_eq!(r.findings.len(), 3);
+        let lock = r.categories.iter().find(|c| c.name == "lockfile").unwrap();
+        assert_eq!((lock.errors, lock.warnings, lock.needs_setup), (0, 0, 1));
         let err = r.findings.iter().find(|f| f.severity == "error").unwrap();
-        assert_eq!(err.rule, "TAU-CONFIG-ENDPOINT");
-        assert_eq!(err.category, "config");
+        assert_eq!(err.rule, "tau.config.endpoint");
+        assert_eq!(err.location.as_ref().unwrap().path, "tau.toml");
+        assert!(r.findings.iter().any(|f| f.severity == "needs-setup"));
+        assert!(err.remediation.is_some());
         assert_eq!(r.sandbox.tier, "seatbelt");
     }
 

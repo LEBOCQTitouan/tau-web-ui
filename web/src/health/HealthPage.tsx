@@ -6,13 +6,13 @@ import { useStore } from "../store/store";
 
 const SEV_CLASS: Record<string, string> = {
   error: "bg-st-error-soft text-st-error",
-  warning: "bg-amber-100 text-amber-800",
-  note: "bg-st-running-soft text-st-running",
+  "needs-setup": "bg-amber-100 text-amber-800",
+  warning: "bg-st-running-soft text-st-running",
   pass: "bg-st-ok-soft text-st-ok",
 };
 
 function SeverityBadge({ severity, label }: { severity: string; label?: string }) {
-  const cls = SEV_CLASS[severity] ?? SEV_CLASS.note;
+  const cls = SEV_CLASS[severity] ?? SEV_CLASS.warning;
   return (
     <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${cls}`}>
       {label ?? severity}
@@ -20,10 +20,10 @@ function SeverityBadge({ severity, label }: { severity: string; label?: string }
   );
 }
 
-function worst(c: CategoryStatus): "error" | "warning" | "note" | "pass" {
+function worst(c: CategoryStatus): "error" | "needs-setup" | "warning" | "pass" {
   if (c.errors > 0) return "error";
+  if (c.needs_setup > 0) return "needs-setup";
   if (c.warnings > 0) return "warning";
-  if (c.notes > 0) return "note";
   return "pass";
 }
 
@@ -83,7 +83,7 @@ export function HealthPage() {
         <div className="flex flex-wrap gap-2">
           {(report?.categories ?? []).map((c) => {
             const w = worst(c);
-            const total = c.errors + c.warnings + c.notes;
+            const total = c.errors + c.warnings + c.needs_setup;
             const active = filter === c.name;
             return (
               <button
@@ -106,19 +106,26 @@ export function HealthPage() {
             <tr className="border-b border-border text-left text-muted">
               <th className="py-1 pr-2 font-medium">severity</th>
               <th className="px-2 py-1 font-medium">rule</th>
-              <th className="px-2 py-1 font-medium">message</th>
+              <th className="px-2 py-1 font-medium">summary</th>
               <th className="px-2 py-1 font-medium">location</th>
             </tr>
           </thead>
           <tbody>
             {shown.map((f, i) => (
-              <tr key={`${f.rule}-${i}`} className="border-b border-border/60">
+              <tr key={`${f.rule}-${i}`} className="border-b border-border/60 align-top">
                 <td className="py-1 pr-2">
                   <SeverityBadge severity={f.severity} />
                 </td>
                 <td className="px-2 py-1 font-mono text-accent">{f.rule}</td>
-                <td className="px-2 py-1">{f.message}</td>
-                <td className="px-2 py-1 font-mono text-muted">{f.location ?? "—"}</td>
+                <td className="px-2 py-1">
+                  {f.summary}
+                  {f.remediation && (
+                    <div className="text-[10px] text-muted">↳ {f.remediation}</div>
+                  )}
+                </td>
+                <td className="px-2 py-1 font-mono text-muted">
+                  {f.location ? `${f.location.path}${f.location.line ? `:${f.location.line}` : ""}` : "—"}
+                </td>
               </tr>
             ))}
             {shown.length === 0 && (

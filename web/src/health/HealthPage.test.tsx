@@ -5,24 +5,28 @@ import { HealthPage } from "./HealthPage";
 
 const report = {
   categories: [
-    { name: "config", errors: 1, warnings: 0, notes: 0 },
-    { name: "lockfile", errors: 0, warnings: 1, notes: 0 },
-    { name: "pkg", errors: 0, warnings: 0, notes: 0 },
+    { name: "config", errors: 1, warnings: 0, needs_setup: 0 },
+    { name: "lockfile", errors: 0, warnings: 0, needs_setup: 1 },
+    { name: "packages", errors: 0, warnings: 0, needs_setup: 0 },
   ],
   findings: [
     {
       category: "config",
       severity: "error",
-      rule: "TAU-CONFIG-ENDPOINT",
-      message: "inference.endpoint not set",
-      location: "tau.toml:3",
+      rule: "tau.config.endpoint",
+      summary: "inference.endpoint not set",
+      detail: null,
+      remediation: "set inference.endpoint in tau.toml",
+      location: { path: "tau.toml", line: 3 },
     },
     {
       category: "lockfile",
-      severity: "warning",
-      rule: "TAU-LOCK-STALE",
-      message: "stale",
-      location: "tau.lock:1",
+      severity: "needs-setup",
+      rule: "tau.lockfile.missing",
+      summary: "no lockfile — packages not installed",
+      detail: null,
+      remediation: "run `tau install`",
+      location: null,
     },
   ],
   sandbox: { tier: "seatbelt", status: "ready", no_sandbox: false },
@@ -35,7 +39,10 @@ beforeEach(() => {
 describe("HealthPage", () => {
   it("renders category chips + findings, gated conformance present", async () => {
     render(<HealthPage />);
-    await waitFor(() => expect(screen.getByText("TAU-CONFIG-ENDPOINT")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("tau.config.endpoint")).toBeInTheDocument());
+    expect(screen.getByText("inference.endpoint not set")).toBeInTheDocument();
+    expect(screen.getByText("set inference.endpoint in tau.toml", { exact: false }))
+      .toBeInTheDocument();
     expect(screen.getByRole("button", { name: /config/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /lockfile/i })).toBeInTheDocument();
     expect(screen.getByText(/waits on tau β\.6/i)).toBeInTheDocument();
@@ -44,11 +51,11 @@ describe("HealthPage", () => {
   it("filters the findings table by category chip", async () => {
     const user = userEvent.setup();
     render(<HealthPage />);
-    await waitFor(() => expect(screen.getByText("TAU-CONFIG-ENDPOINT")).toBeInTheDocument());
-    expect(screen.getByText("TAU-LOCK-STALE")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("tau.config.endpoint")).toBeInTheDocument());
+    expect(screen.getByText("tau.lockfile.missing")).toBeInTheDocument();
     // filter to lockfile → config finding disappears
     await user.click(screen.getByRole("button", { name: /lockfile/i }));
-    expect(screen.getByText("TAU-LOCK-STALE")).toBeInTheDocument();
-    expect(screen.queryByText("TAU-CONFIG-ENDPOINT")).not.toBeInTheDocument();
+    expect(screen.getByText("tau.lockfile.missing")).toBeInTheDocument();
+    expect(screen.queryByText("tau.config.endpoint")).not.toBeInTheDocument();
   });
 });

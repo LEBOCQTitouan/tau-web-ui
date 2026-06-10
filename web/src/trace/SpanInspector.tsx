@@ -1,4 +1,5 @@
 import type { Span } from "../types/Span";
+import { agentSummary } from "./agentMap";
 
 function Section({ title, value }: { title: string; value: unknown }) {
   if (value === undefined || value === null) return null;
@@ -12,16 +13,36 @@ function Section({ title, value }: { title: string; value: unknown }) {
   );
 }
 
-export function SpanInspector({ span, workflow }: { span: Span | null; workflow?: boolean }) {
+export function SpanInspector({
+  span,
+  spans,
+  workflow,
+}: {
+  span: Span | null;
+  spans?: Span[];
+  workflow?: boolean;
+}) {
   if (!span) return <p className="p-3 text-sm text-muted">Select a node to inspect.</p>;
   const attrs = (span.attributes ?? {}) as Record<string, unknown>;
   const showDrill = workflow && span.kind === "agent";
+  const summary = span.kind === "agent" && spans ? agentSummary(spans, span.id) : null;
   return (
     <div className="overflow-auto p-3">
       <h3 className="mb-1 mt-0 text-sm font-semibold">{span.name}</h3>
       <div className="mb-2 text-xs text-muted">
         {span.kind} · {span.status}
       </div>
+      {span.kind === "agent" && (
+        <div className="mb-2.5 rounded-md border border-accent/30 bg-accent/5 p-2 text-[11px] text-muted">
+          <span className="text-accent">⤳ Spawned sub-agent</span> — created at runtime by its
+          parent (non-deterministic).
+          {summary && (
+            <div className="mt-1 text-[10px]">
+              spawn depth {summary.depth} · {summary.children} direct sub-agents
+            </div>
+          )}
+        </div>
+      )}
       <Section title="Input" value={attrs.input} />
       <Section title="Output" value={attrs.output} />
       <Section title="Args" value={attrs.args} />

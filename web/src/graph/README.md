@@ -6,7 +6,7 @@ Built in this directory: the Workflow graph editor (gated β.2). See
 - `GraphEditor.tsx` — view-by-default editor (workflow picker, View↔Edit toggle,
   node inspector, add-step palette, gated "Build from IR").
 - `GraphCanvas.tsx` + `StepNode.tsx` — the `@xyflow/react` canvas, shared in spirit
-  with `trace/TraceGraph.tsx`; edit mode only differs by enabling drag/connect/add.
+  with `trace/AgentMapView.tsx`; edit mode only differs by enabling drag/connect/add.
 - `layout.ts` — pure `workflowToFlow` (deterministic DAG layout).
 
 Graph data is mock-first via the gateway `WorkflowGraphSource` seam

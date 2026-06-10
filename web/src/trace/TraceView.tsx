@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../store/store";
-import { TraceGraph } from "./TraceGraph";
+import { AgentMap } from "./AgentMapView";
 import { TraceTimeline } from "./TraceTimeline";
 import { AssistantStream } from "./AssistantStream";
 import { SpanInspector } from "./SpanInspector";
@@ -34,7 +34,7 @@ export function TraceView() {
           <strong className="text-sm">Trace · {trace.run.agent_id}</strong>
           <Tabs
             tabs={[
-              { id: "graph", label: "Graph" },
+              { id: "graph", label: "Agents" },
               { id: "timeline", label: "Timeline" },
             ]}
             value={tab}
@@ -49,13 +49,13 @@ export function TraceView() {
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-[2] border-r border-border">
           {tab === "graph" ? (
-            <TraceGraph spans={trace.spans} />
+            <AgentMap spans={trace.spans} run={trace.run} />
           ) : (
             <TraceTimeline spans={trace.spans} />
           )}
         </div>
         <div className="min-w-[280px] flex-1 overflow-auto">
-          <SpanInspector span={selected} workflow={isWorkflow} />
+          <SpanInspector span={selected} spans={trace.spans} workflow={isWorkflow} />
         </div>
       </div>
       <AssistantStream />

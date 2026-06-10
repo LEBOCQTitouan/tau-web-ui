@@ -45,6 +45,23 @@ describe("SpanInspector", () => {
     expect(screen.getByText(/gated/i)).toBeInTheDocument();
   });
 
+  it("shows the spawned sub-agent note for an agent span", () => {
+    const agentSpan = {
+      id: "sp1",
+      parent_id: "turn",
+      run_id: "R",
+      kind: "agent" as const,
+      name: "agent.summarizer.spawn",
+      status: "ok" as const,
+      started_at: "t",
+      ended_at: null,
+      attributes: {},
+    };
+    render(<SpanInspector span={agentSpan} spans={[agentSpan]} />);
+    expect(screen.getByText(/Spawned sub-agent/i)).toBeInTheDocument();
+    expect(screen.getByText(/spawn depth 1/i)).toBeInTheDocument();
+  });
+
   it("no drill for a normal agent-run trace", () => {
     const span = {
       id: "s",

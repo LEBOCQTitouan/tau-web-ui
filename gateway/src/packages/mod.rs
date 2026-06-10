@@ -14,7 +14,8 @@ pub struct Package {
     pub name: String,
     pub version: String,
     pub source: String,
-    pub status: String,
+    pub scope: String, // "project" | "global"
+    pub version_count: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -62,7 +63,8 @@ impl MockOps {
             name: name.into(),
             version: version.into(),
             source: format!("github.com/tau/{name}"),
-            status: "ok".into(),
+            scope: "project".into(),
+            version_count: 1,
         };
         MockOps {
             pkgs: Mutex::new(vec![
@@ -90,7 +92,8 @@ impl PackageOps for MockOps {
             name: name.clone(),
             version: "1.0.0".into(),
             source: source_from_url(git_url),
-            status: "ok".into(),
+            scope: "project".into(),
+            version_count: 1,
         };
         let mut list = self.pkgs.lock().unwrap();
         if !list.iter().any(|p| p.name == name) {
@@ -181,6 +184,8 @@ mod tests {
         assert_eq!(ops.list().len(), 3);
         let p = ops.install("https://github.com/acme/cooltool.git").unwrap();
         assert_eq!(p.name, "cooltool");
+        assert_eq!(p.scope, "project");
+        assert_eq!(p.version_count, 1);
         assert_eq!(ops.list().len(), 4);
         ops.uninstall("cooltool").unwrap();
         assert_eq!(ops.list().len(), 3);

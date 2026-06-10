@@ -129,6 +129,37 @@ impl PackageOps for MockOps {
     }
 }
 
+/// Accept only remote git URLs with a known scheme (or scp-like), plus local
+/// `file://` (for offline fixtures). Never a leading `-` (flag smuggling).
+fn is_safe_pkg_url(url: &str) -> bool {
+    if url.is_empty() || url.starts_with('-') {
+        return false;
+    }
+    const SCHEMES: [&str; 5] = ["https://", "http://", "ssh://", "git://", "file://"];
+    let scheme_ok = SCHEMES.iter().any(|s| url.starts_with(s));
+    let scp_like = !url.contains("://")
+        && url.find(':').map(|c| url[..c].contains('@')).unwrap_or(false);
+    scheme_ok || scp_like
+}
+
+/// A package name is a single token: `[A-Za-z0-9._-]+`, no leading `-`.
+fn is_safe_pkg_name(name: &str) -> bool {
+    !name.is_empty()
+        && !name.starts_with('-')
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+}
+
+fn parse_install_json(stdout: &str, url: &str) -> Package {
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap_or(serde_json::Value::Null);
+    Package {
+        name: v["name"].as_str().unwrap_or("").to_string(),
+        version: v["version"].as_str().unwrap_or("").to_string(),
+        source: url.to_string(),
+        scope: v["scope"].as_str().unwrap_or("").to_string(),
+        version_count: 1,
+    }
+}
+
 fn parse_list_json(stdout: &str) -> Vec<Package> {
     serde_json::from_str::<Vec<serde_json::Value>>(stdout.trim())
         .unwrap_or_default()
@@ -156,8 +187,8 @@ fn parse_verify_jsonl(stdout: &str) -> Vec<VerifyResult> {
         .collect()
 }
 
-/// Seam: shell real `tau install/list/verify --json`. Not wired in v1 (mock covers
-/// fake-tau-serve). list/verify return empty; mutations return a graceful error.
+/// Real-tau package seam: shells `tau list/install/uninstall/update/resolve/verify
+/// --json` in the project dir. Reads parse stdout; writes are URL/name-guarded.
 pub struct CliOps {
     bin: PathBuf,
     project: PathBuf,
@@ -186,16 +217,45 @@ impl PackageOps for CliOps {
         let (_, out, _) = self.run(&["list", "packages", "--json"]);
         parse_list_json(&out)
     }
-    fn install(&self, _git_url: &str) -> Result<Package> {
-        Err(anyhow!(
-            "real-tau package install not wired yet (use the tau CLI)"
-        ))
+    fn install(&self, git_url: &str) -> Result<Package> {
+        if !is_safe_pkg_url(git_url) {
+            return Err(anyhow!("invalid package url: {git_url}"));
+        }
+        let (ok, out, err) = self.run(&["install", git_url, "--json"]);
+        if !ok {
+            return Err(anyhow!("tau install failed: {}", err.trim()));
+        }
+        Ok(parse_install_json(&out, git_url))
     }
-    fn uninstall(&self, _name: &str) -> Result<()> {
-        Err(anyhow!("real-tau uninstall not wired yet"))
+    fn uninstall(&self, name: &str) -> Result<()> {
+        if !is_safe_pkg_name(name) {
+            return Err(anyhow!("invalid package name: {name}"));
+        }
+        let (ok, _, err) = self.run(&["uninstall", name, "--json"]);
+        if !ok {
+            return Err(anyhow!("tau uninstall failed: {}", err.trim()));
+        }
+        Ok(())
     }
-    fn update(&self, _name: &str, _to: Option<String>) -> Result<Package> {
-        Err(anyhow!("real-tau update not wired yet"))
+    fn update(&self, name: &str, to: Option<String>) -> Result<Package> {
+        if !is_safe_pkg_name(name) {
+            return Err(anyhow!("invalid package name: {name}"));
+        }
+        let mut args: Vec<&str> = vec!["update", name];
+        if let Some(v) = to.as_deref() {
+            args.push("--version");
+            args.push(v);
+        }
+        args.push("--json");
+        let (ok, _, err) = self.run(&args);
+        if !ok {
+            return Err(anyhow!("tau update failed: {}", err.trim()));
+        }
+        // `tau update` JSON is an event stream; re-list and return the updated row.
+        self.list()
+            .into_iter()
+            .find(|p| p.name == name)
+            .ok_or_else(|| anyhow!("package {name} not found after update"))
     }
     fn resolve(&self) -> Result<Vec<Package>> {
         let (ok, _, err) = self.run(&["resolve"]);
@@ -257,5 +317,35 @@ mod tests {
         assert!(ops.verify().iter().all(|v| v.status == "ok"));
         let u = ops.update("anthropic", Some("0.2.0".into())).unwrap();
         assert_eq!(u.version, "0.2.0");
+    }
+
+    #[test]
+    fn safe_pkg_url_accepts_known_schemes_and_file() {
+        assert!(is_safe_pkg_url("https://github.com/acme/bot.git"));
+        assert!(is_safe_pkg_url("file:///tmp/x.git"));
+        assert!(is_safe_pkg_url("git@github.com:acme/bot.git"));
+        assert!(!is_safe_pkg_url("--upload-pack=evil"));
+        assert!(!is_safe_pkg_url("/local/path"));
+        assert!(!is_safe_pkg_url(""));
+    }
+
+    #[test]
+    fn safe_pkg_name_rejects_flags() {
+        assert!(is_safe_pkg_name("demo-skill"));
+        assert!(is_safe_pkg_name("anthropic"));
+        assert!(!is_safe_pkg_name("--version"));
+        assert!(!is_safe_pkg_name("a/b"));
+        assert!(!is_safe_pkg_name(""));
+    }
+
+    #[test]
+    fn parse_install_json_builds_package() {
+        let json = r#"{"name":"demo-skill","path":"/h/.tau/packages/demo-skill/0.1.0","scope":"global","version":"0.1.0"}"#;
+        let p = parse_install_json(json, "file:///tmp/demo-skill.git");
+        assert_eq!(p.name, "demo-skill");
+        assert_eq!(p.version, "0.1.0");
+        assert_eq!(p.scope, "global");
+        assert_eq!(p.source, "file:///tmp/demo-skill.git");
+        assert_eq!(p.version_count, 1);
     }
 }

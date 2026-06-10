@@ -138,7 +138,10 @@ fn is_safe_pkg_url(url: &str) -> bool {
     const SCHEMES: [&str; 5] = ["https://", "http://", "ssh://", "git://", "file://"];
     let scheme_ok = SCHEMES.iter().any(|s| url.starts_with(s));
     let scp_like = !url.contains("://")
-        && url.find(':').map(|c| url[..c].contains('@')).unwrap_or(false);
+        && url
+            .find(':')
+            .map(|c| url[..c].contains('@'))
+            .unwrap_or(false);
     scheme_ok || scp_like
 }
 
@@ -146,11 +149,14 @@ fn is_safe_pkg_url(url: &str) -> bool {
 fn is_safe_pkg_name(name: &str) -> bool {
     !name.is_empty()
         && !name.starts_with('-')
-        && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
 }
 
 fn parse_install_json(stdout: &str, url: &str) -> Package {
-    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap_or(serde_json::Value::Null);
+    let v: serde_json::Value =
+        serde_json::from_str(stdout.trim()).unwrap_or(serde_json::Value::Null);
     Package {
         name: v["name"].as_str().unwrap_or("").to_string(),
         version: v["version"].as_str().unwrap_or("").to_string(),
@@ -201,7 +207,11 @@ impl CliOps {
 
     /// Run a tau subcommand in the project dir; returns (success, stdout, stderr).
     fn run(&self, args: &[&str]) -> (bool, String, String) {
-        match Command::new(&self.bin).args(args).current_dir(&self.project).output() {
+        match Command::new(&self.bin)
+            .args(args)
+            .current_dir(&self.project)
+            .output()
+        {
             Ok(o) => (
                 o.status.success(),
                 String::from_utf8_lossy(&o.stdout).into_owned(),

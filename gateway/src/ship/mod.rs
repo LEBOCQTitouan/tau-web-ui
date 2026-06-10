@@ -11,30 +11,21 @@ use ts_rs::TS;
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Target {
-    pub name: String,         // "host" | "wasm" | "c-abi" | "mcu"
-    pub substrate: String,    // "native" | "wasm32" | "cdylib" | "embedded"
-    pub status: String,       // "ready" | "gated"
-    pub gate: Option<String>, // "γ" for gated; None for host
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct BuildStep {
-    pub name: String,   // "resolve deps" | "typecheck" | "compile" | "bundle"
-    pub status: String, // "ok"
-    pub duration_ms: u32,
+    pub triple: String,
+    pub platform: String,
+    pub adapter_family: String,
+    pub tier: String,
+    pub status: String, // available | reserved | unknown
+    pub required_shapes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Bundle {
-    pub artifact: String, // "<project>.tau"
-    pub target: String,
+    pub path: String,
+    pub sha256: String,
     pub size_bytes: u64,
-    pub hash: String,  // "sha256:…"
-    pub drift: String, // "clean" | "drifted"
-    pub built_at: String,
-    pub steps: Vec<BuildStep>,
+    pub built_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -46,19 +37,20 @@ pub struct BuildRequest {
 /// Build failure mapped to HTTP 400 by the handler.
 #[derive(Debug)]
 pub enum BuildError {
-    Gated(String),
-    UnknownTarget(String),
+    NeedsProvisioning(String),
+    Invalid(String),
+    Internal(String),
 }
 
 impl std::fmt::Display for BuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BuildError::Gated(t) => write!(f, "target '{t}' is gated (phase γ)"),
-            BuildError::UnknownTarget(t) => write!(f, "unknown target '{t}'"),
+            BuildError::NeedsProvisioning(m) => write!(f, "project needs `tau install` first: {m}"),
+            BuildError::Invalid(m) => write!(f, "build rejected: {m}"),
+            BuildError::Internal(m) => write!(f, "build failed: {m}"),
         }
     }
 }
-
 impl std::error::Error for BuildError {}
 
 /// Source of targets/bundles + the build action. Mock-first; the CLI path stays
@@ -69,33 +61,22 @@ pub trait ShipSource: Send + Sync {
     fn build(&self, target: &str) -> Result<Bundle, BuildError>;
 }
 
-/// The fixed target registry (host ready; the three substrates gated at γ).
+/// The fixed target registry mirroring `tau target list --json`.
 fn targets() -> Vec<Target> {
-    let gated = |name: &str, substrate: &str| Target {
-        name: name.into(),
-        substrate: substrate.into(),
-        status: "gated".into(),
-        gate: Some("γ".into()),
+    let t = |triple: &str, platform: &str, fam: &str, tier: &str, status: &str| Target {
+        triple: triple.into(),
+        platform: platform.into(),
+        adapter_family: fam.into(),
+        tier: tier.into(),
+        status: status.into(),
+        required_shapes: vec!["fs.r".into(), "fs.w".into(), "exec".into(), "net.http".into()],
     };
     vec![
-        Target {
-            name: "host".into(),
-            substrate: "native".into(),
-            status: "ready".into(),
-            gate: None,
-        },
-        gated("wasm", "wasm32"),
-        gated("c-abi", "cdylib"),
-        gated("mcu", "embedded"),
+        t("darwin-native-strict", "darwin", "native", "strict", "available"),
+        t("linux-native-strict", "linux", "native", "strict", "available"),
+        t("passthrough", "any", "passthrough", "none", "available"),
+        t("windows-native-strict", "windows", "native", "strict", "reserved"),
     ]
-}
-
-fn step(name: &str, duration_ms: u32) -> BuildStep {
-    BuildStep {
-        name: name.into(),
-        status: "ok".into(),
-        duration_ms,
-    }
 }
 
 pub struct MockShip {
@@ -106,26 +87,15 @@ pub struct MockShip {
 impl MockShip {
     pub fn new(project: String) -> Self {
         let artifact = format!("{project}.tau");
-        let seed = |size: u64, drift: &str, built_at: &str| Bundle {
-            artifact: artifact.clone(),
-            target: "host".into(),
+        let seed = |size: u64, built_at: &str| Bundle {
+            path: artifact.clone(),
+            sha256: "9f3c1a2b7e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1e2d3c4b5a6f7e8d9c0b".into(),
             size_bytes: size,
-            hash: "sha256:9f3c1a2b7e".into(),
-            drift: drift.into(),
-            built_at: built_at.into(),
-            steps: vec![
-                step("resolve deps", 120),
-                step("typecheck", 340),
-                step("compile", 2100),
-                step("bundle", 90),
-            ],
+            built_at: Some(built_at.into()),
         };
         MockShip {
             project,
-            bundles: Mutex::new(vec![
-                seed(2_456_789, "clean", "2m ago"),
-                seed(2_310_004, "drifted", "1d ago"),
-            ]),
+            bundles: Mutex::new(vec![seed(2_456_789, "2m ago"), seed(2_310_004, "1d ago")]),
         }
     }
 }
@@ -134,39 +104,29 @@ impl ShipSource for MockShip {
     fn list_targets(&self) -> Vec<Target> {
         targets()
     }
-
     fn list_bundles(&self) -> Vec<Bundle> {
         self.bundles.lock().unwrap().clone()
     }
-
     fn build(&self, target: &str) -> Result<Bundle, BuildError> {
         let t = targets()
             .into_iter()
-            .find(|t| t.name == target)
-            .ok_or_else(|| BuildError::UnknownTarget(target.to_string()))?;
-        if t.status != "ready" {
-            return Err(BuildError::Gated(target.to_string()));
+            .find(|t| t.triple == target)
+            .ok_or_else(|| BuildError::Invalid(format!("unknown target '{target}'")))?;
+        if t.status != "available" {
+            return Err(BuildError::Invalid(format!("target '{target}' is {}", t.status)));
         }
         let bundle = Bundle {
-            artifact: format!("{}.tau", self.project),
-            target: target.to_string(),
+            path: format!("{}.tau", self.project),
+            sha256: "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b".into(),
             size_bytes: 2_460_512,
-            hash: "sha256:1a2b3c4d5e".into(),
-            drift: "clean".into(),
-            built_at: "just now".into(),
-            steps: vec![
-                step("resolve deps", 118),
-                step("typecheck", 352),
-                step("compile", 2087),
-                step("bundle", 94),
-            ],
+            built_at: Some("just now".into()),
         };
         self.bundles.lock().unwrap().insert(0, bundle.clone());
         Ok(bundle)
     }
 }
 
-/// CLI seam — not wired in v1 (the mock covers fake-tau-serve).
+/// CLI seam — wired in a later task.
 pub struct CliShip;
 
 impl ShipSource for CliShip {
@@ -177,7 +137,7 @@ impl ShipSource for CliShip {
         vec![]
     }
     fn build(&self, target: &str) -> Result<Bundle, BuildError> {
-        Err(BuildError::UnknownTarget(target.to_string()))
+        Err(BuildError::Invalid(format!("unknown target '{target}'")))
     }
 }
 
@@ -188,42 +148,33 @@ mod tests {
     #[test]
     fn mock_seeds_targets_and_bundles() {
         let s = MockShip::new("demo".into());
-        let targets = s.list_targets();
-        assert_eq!(targets.len(), 4);
-        let host = targets.iter().find(|t| t.name == "host").unwrap();
-        assert_eq!(host.status, "ready");
-        assert!(host.gate.is_none());
-        let wasm = targets.iter().find(|t| t.name == "wasm").unwrap();
-        assert_eq!(wasm.status, "gated");
-        assert_eq!(wasm.gate.as_deref(), Some("γ"));
+        let ts = s.list_targets();
+        assert!(ts.iter().any(|t| t.triple == "darwin-native-strict" && t.status == "available"));
+        assert!(ts.iter().any(|t| t.triple == "windows-native-strict" && t.status == "reserved"));
         assert!(!s.list_bundles().is_empty());
     }
 
     #[test]
-    fn build_host_appends_bundle_with_steps() {
+    fn build_available_appends_bundle() {
         let s = MockShip::new("demo".into());
         let before = s.list_bundles().len();
-        let b = s.build("host").unwrap();
-        assert_eq!(b.target, "host");
-        assert_eq!(b.artifact, "demo.tau");
-        assert!(!b.steps.is_empty());
-        assert!(b.steps.iter().all(|st| st.status == "ok"));
+        let b = s.build("darwin-native-strict").unwrap();
+        assert_eq!(b.path, "demo.tau");
         assert_eq!(s.list_bundles().len(), before + 1);
-        // appended to the front
-        assert_eq!(s.list_bundles()[0].built_at, "just now");
+        assert_eq!(s.list_bundles()[0].built_at.as_deref(), Some("just now"));
     }
 
     #[test]
-    fn build_rejects_gated_and_unknown() {
+    fn build_rejects_reserved_and_unknown() {
         let s = MockShip::new("demo".into());
-        assert!(matches!(s.build("wasm"), Err(BuildError::Gated(_))));
-        assert!(matches!(s.build("nope"), Err(BuildError::UnknownTarget(_))));
+        assert!(matches!(s.build("windows-native-strict"), Err(BuildError::Invalid(_))));
+        assert!(matches!(s.build("nope"), Err(BuildError::Invalid(_))));
     }
 
     #[test]
     fn cli_ship_is_empty() {
         assert!(CliShip.list_targets().is_empty());
         assert!(CliShip.list_bundles().is_empty());
-        assert!(CliShip.build("host").is_err());
+        assert!(CliShip.build("darwin-native-strict").is_err());
     }
 }

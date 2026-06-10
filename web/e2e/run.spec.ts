@@ -14,6 +14,8 @@ test("launch a run and watch the live trace build", async ({ page }) => {
   const firstPaint = Date.now() - t0;
   expect(firstPaint).toBeLessThan(1500);
 
+  // an agent run defaults to the Agents graph; the tool call lives on the Timeline
+  await page.getByRole("button", { name: "Timeline" }).click();
   await expect(page.getByText("fs-read")).toBeVisible();
   await page.getByText("fs-read").click();
   await expect(page.getByText(/"path"/)).toBeVisible();
@@ -25,11 +27,13 @@ test("launch a run and watch the live trace build", async ({ page }) => {
 
   await page.getByRole("button", { name: /back to runs/i }).click();
   await page.locator("table tbody tr").first().click();
+  await page.getByRole("button", { name: "Timeline" }).click();
   await expect(page.getByText("fs-read")).toBeVisible();
 
   // Deep-link / hard refresh: the trace URL must re-scope on a cold load
   // (regression guard for the active-project prefix being set on first paint).
   await page.reload();
+  await page.getByRole("button", { name: "Timeline" }).click();
   await expect(page.getByText("fs-read")).toBeVisible({ timeout: 5000 });
 });
 
@@ -357,4 +361,24 @@ test("providers: add TokenBroker + WorkloadIdentity — addable, resolved by tau
   await page.getByRole("button", { name: /^save$/i }).click();
   // both persist; the neutral runtime note appears
   await expect(page.getByText(/resolved by tau at runtime/i).first()).toBeVisible();
+});
+
+test("trace: the Agents tab shows the run's spawned sub-agents", async ({ page }) => {
+  await page.goto(`${P}/runs`);
+  await page.getByLabel("agent").selectOption("researcher");
+  await page.getByLabel("prompt").fill("research e2e");
+  await page.getByRole("button", { name: "Run" }).click();
+
+  // the trace header confirms the researcher run is building inline
+  await expect(page.getByText(/Trace · researcher/)).toBeVisible({ timeout: 5000 });
+
+  // the researcher's own tool call shows up on the Timeline tab
+  await page.getByRole("button", { name: "Timeline" }).click();
+  await expect(page.getByText("fs-read")).toBeVisible({ timeout: 5000 });
+
+  // the Agents tab (default for an agent run) renders the spawn org-chart
+  await page.getByRole("button", { name: "Agents" }).click();
+  await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText("summarizer")).toBeVisible();
+  await expect(page.getByText("factcheck")).toBeVisible();
 });

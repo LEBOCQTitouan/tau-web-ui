@@ -1,8 +1,8 @@
 //! LLM-backend credentials: an ordered source **chain** (first-resolves-wins),
 //! tau's "provider chain, never a vault" model with the gateway as the parent-app
-//! resolver. CR-1 shipped Env + Local; CR-2 ungated the SecretManagers (Vault /
-//! AWS / GCP / Azure KV), resolving them by ambient-env presence (no secret fetched);
-//! TokenBroker / WorkloadIdentity remain gated (CR-3). The store is global (per
+//! resolver. Env / Local resolve here; SecretManagers (Vault / AWS / GCP / Azure KV)
+//! resolve by ambient-env presence; TokenBroker / WorkloadIdentity are configured
+//! here but **resolved by tau at runtime** (UI-only). The store is global (per
 //! gateway `data_root`); secret values are write-only and never echoed.
 
 use std::collections::{BTreeMap, HashSet};
@@ -26,13 +26,6 @@ pub enum SourceKind {
     WorkloadIdentity,
 }
 
-impl SourceKind {
-    /// Not yet wired (the TokenBroker/WorkloadIdentity path is CR-3).
-    pub fn gated(self) -> bool {
-        matches!(self, SourceKind::TokenBroker | SourceKind::WorkloadIdentity)
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct SourceConfig {
@@ -51,8 +44,7 @@ pub struct SourceStatus {
     #[ts(rename = "ref")]
     pub reference: Option<String>,
     pub configured: bool,
-    pub gated: bool,
-    pub detail: Option<String>, // non-secret hint, e.g. "VAULT_ADDR not set"; None when configured
+    pub detail: Option<String>, // non-secret hint; "resolved by tau at runtime" for broker/WI
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -103,7 +95,7 @@ pub fn source_configured(
         SourceKind::Vault | SourceKind::AwsKv | SourceKind::GcpKv | SourceKind::AzureKv => {
             ref_present && manager_env_vars(s.kind).iter().any(|v| env_set(v))
         }
-        SourceKind::TokenBroker | SourceKind::WorkloadIdentity => false, // gated (CR-3)
+        SourceKind::TokenBroker | SourceKind::WorkloadIdentity => false, // resolution deferred to tau at runtime
     }
 }
 
@@ -119,7 +111,9 @@ pub fn source_detail(
     let ref_empty = s.reference.as_deref().map(|r| r.is_empty()).unwrap_or(true);
     match s.kind {
         SourceKind::Local => Some("no value stored".to_string()),
-        SourceKind::TokenBroker | SourceKind::WorkloadIdentity => Some("waits on CR-3".to_string()),
+        SourceKind::TokenBroker | SourceKind::WorkloadIdentity => {
+            Some("resolved by tau at runtime".to_string())
+        }
         SourceKind::Env if ref_empty => Some("ref is empty".to_string()),
         SourceKind::Env => Some(format!("{} not set", s.reference.as_deref().unwrap_or(""))),
         _ if ref_empty => Some("ref is empty".to_string()),
@@ -162,7 +156,7 @@ static WRITE_LOCK: Mutex<()> = Mutex::new(());
 /// Why a `put` failed — lets the API map validation to 422 and I/O to 500.
 #[derive(Debug)]
 pub enum PutError {
-    /// Bad request (gated kind, duplicate kind, empty env ref) → HTTP 422.
+    /// Bad request (duplicate kind, or an empty ref on a ref-required kind) → HTTP 422.
     Invalid(String),
     /// A write to the data dir failed (disk full, permissions, …) → HTTP 500.
     Io(std::io::Error),
@@ -225,7 +219,6 @@ impl Credentials {
                 kind: s.kind,
                 reference: s.reference.clone(),
                 configured: source_configured(s, has_local, &env_get),
-                gated: s.kind.gated(),
                 detail: source_detail(s, has_local, &env_get),
             })
             .collect();
@@ -258,13 +251,7 @@ impl Credentials {
     ) -> Result<BackendCredentialStatus, PutError> {
         let mut seen = HashSet::new();
         for s in &sources {
-            if s.kind.gated() {
-                return Err(PutError::Invalid(format!(
-                    "source kind {:?} is gated",
-                    s.kind
-                )));
-            }
-            if !matches!(s.kind, SourceKind::Local)
+            if !matches!(s.kind, SourceKind::Local | SourceKind::WorkloadIdentity)
                 && s.reference.as_deref().unwrap_or("").is_empty()
             {
                 return Err(PutError::Invalid(
@@ -385,21 +372,16 @@ mod resolver_tests {
     }
 
     #[test]
-    fn gated_kinds_are_only_broker_and_workload() {
-        let tb = [src(SourceKind::TokenBroker, Some("https://broker"))];
-        assert_eq!(resolve(&tb, true, &no_env), (false, None));
-        assert!(SourceKind::TokenBroker.gated());
-        assert!(SourceKind::WorkloadIdentity.gated());
-        for k in [
-            SourceKind::Vault,
-            SourceKind::AwsKv,
-            SourceKind::GcpKv,
-            SourceKind::AzureKv,
-        ] {
-            assert!(!k.gated());
-        }
-        assert!(!SourceKind::Env.gated());
-        assert!(!SourceKind::Local.gated());
+    fn token_broker_and_workload_identity_defer_to_tau() {
+        let tb = src(SourceKind::TokenBroker, Some("https://broker"));
+        let wi = src(SourceKind::WorkloadIdentity, None);
+        // the gateway never resolves these — resolution is tau's at runtime
+        assert!(!source_configured(&tb, true, &no_env));
+        assert!(!source_configured(&wi, true, &no_env));
+        assert_eq!(source_detail(&tb, false, &no_env).as_deref(), Some("resolved by tau at runtime"));
+        assert_eq!(source_detail(&wi, false, &no_env).as_deref(), Some("resolved by tau at runtime"));
+        // a chain of only these resolves to nothing in the gateway
+        assert_eq!(resolve(&[tb, wi], true, &no_env), (false, None));
     }
 
     #[test]
@@ -457,7 +439,7 @@ mod resolver_tests {
                 &no_env
             )
             .as_deref(),
-            Some("waits on CR-3"),
+            Some("resolved by tau at runtime"),
         );
     }
 
@@ -547,37 +529,25 @@ mod store_tests {
     }
 
     #[test]
-    fn put_rejects_gated_duplicate_and_empty_ref() {
+    fn put_validates_ref_and_duplicates() {
         let dir = tempfile::tempdir().unwrap();
         let c = Credentials::new(dir.path().to_path_buf());
+        // duplicate kind → rejected
         assert!(c
-            .put(
-                "x",
-                vec![cfg(SourceKind::TokenBroker, Some("https://b"))],
-                None
-            )
+            .put("x", vec![cfg(SourceKind::Env, Some("A")), cfg(SourceKind::Env, Some("B"))], None)
             .is_err());
-        assert!(c
-            .put(
-                "x",
-                vec![
-                    cfg(SourceKind::Env, Some("A")),
-                    cfg(SourceKind::Env, Some("B"))
-                ],
-                None
-            )
-            .is_err());
+        // empty ref on a ref-required kind → rejected (Env, SecretManager, TokenBroker)
         assert!(c.put("x", vec![cfg(SourceKind::Env, None)], None).is_err());
-        assert!(c
-            .put("x", vec![cfg(SourceKind::Vault, None)], None)
-            .is_err());
-        let st = c
-            .put("x", vec![cfg(SourceKind::Vault, Some("secret/x"))], None)
-            .unwrap();
-        assert_eq!(st.sources[0].kind, SourceKind::Vault);
-        assert!(!st.sources[0].gated);
-        assert!(!st.sources[0].configured); // no VAULT_ADDR in the test env
-        assert!(st.sources[0].detail.is_some());
+        assert!(c.put("x", vec![cfg(SourceKind::Vault, None)], None).is_err());
+        assert!(c.put("x", vec![cfg(SourceKind::TokenBroker, None)], None).is_err());
+        // accepted: SecretManager with a ref, TokenBroker with a URL, ref-less WorkloadIdentity
+        let v = c.put("a", vec![cfg(SourceKind::Vault, Some("secret/x"))], None).unwrap();
+        assert_eq!(v.sources[0].kind, SourceKind::Vault);
+        assert!(!v.sources[0].configured);
+        assert!(v.sources[0].detail.is_some());
+        assert!(c.put("b", vec![cfg(SourceKind::TokenBroker, Some("https://b"))], None).is_ok());
+        let wi = c.put("c", vec![cfg(SourceKind::WorkloadIdentity, None)], None).unwrap();
+        assert_eq!(wi.sources[0].detail.as_deref(), Some("resolved by tau at runtime"));
     }
 
     #[test]

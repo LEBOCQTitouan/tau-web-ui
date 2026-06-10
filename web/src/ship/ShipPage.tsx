@@ -167,6 +167,11 @@ function TargetCard({ target }: { target: Target }) {
       <div className="mt-0.5 text-[10px] text-muted">
         {target.tier} · {target.status}
       </div>
+      {target.required_shapes.length > 0 && (
+        <div className="mt-0.5 font-mono text-[9px] text-muted">
+          {target.required_shapes.join(" ")}
+        </div>
+      )}
     </div>
   );
 }

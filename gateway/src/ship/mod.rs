@@ -1,7 +1,7 @@
-//! Ship / Targets & Build: a mock-backed catalog of compile targets plus a
-//! synchronous `build` that produces a `.tau` bundle. Mirrors the tools/plugins
-//! seam, with an in-memory bundle list (like packages' `MockOps`). tau has no
-//! real build engine yet — `CliShip` is the empty seam.
+//! Ship / Targets & Build: the compile-target registry, `.tau` bundle builds, and
+//! reproducibility verify. `MockShip` fabricates a deterministic catalog; `CliShip`
+//! shells real tau (`tau target list` / `tau build` / `tau verify`, all `--json`)
+//! and scans the project dir for `*.tau` bundles.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
